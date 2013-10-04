@@ -6,7 +6,7 @@ the latest source version from http://projects.csail.mit.edu/jwi/, but
 augment the code with a maven *pom.xml* file with http://repo.delver.io
 as the initial repository.
 
-**Note:** No additional functionality beyond mavenization will be added.
+**Note:** No additional functionality (beyond mavenization) will _ever_ be added.
 
 License
 -------
