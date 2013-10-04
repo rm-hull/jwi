@@ -1,0 +1,77 @@
+<html>
+<head></head>
+<body>
+The MIT Java Wordnet Interface (JWI) is a Java library for interfacing with the Wordnet electronic 
+dictionary.  It features API calls to retrieve index entries, synsets, morphological 
+exceptions, and sense index entries from the Wordnet data files.  It also has 
+calls that allow browsing by following lexical and semantic pointers, and 
+contains classes that can perform simple morphological processing.  The library 
+includes no GUI elements.
+<p>
+JWI is compatible with Wordnet versions 1.6 through 3.0, as well as a few other Wordnet variations.  
+It is not compatible with Wordnet 1.5.  JWI does not include the Wordnet dictionary itself: that must be downloaded separately from the Wordnet site at 
+<a href="http://wordnet.princeton.edu">http://wordnet.princeton.edu</a>.
+<p>
+JWI is freely available, and licensed for use for all 
+purposes, as long as proper acknowledgment is made.  Details can be found 
+in the license, which is included in the distribution.
+<p>
+The entry point for accessing dictionary data is the 
+{@link edu.mit.jwi.IDictionary} interface.  In the simplest case, where you are using Wordnet 
+with the data files on the same filesystem as your Java program, you can 
+instantiate a {@link edu.mit.jwi.Dictionary} object with a single argument, a {@code URL} or {@code File} object 
+that points to the directory where the Wordnet dictionary data files are 
+located.
+<p>
+An example of this can be found below, in the form of a Java method 
+{@code runExample()}. In the method, the first block of seven lines (4-9) deals 
+with constructing a {@code URL} object that points to the Wordnet data files.  
+In this particular example, the base Wordnet directory is assumed to be stored 
+in a system environment variable called WNHOME; this may be different on your 
+system.  Note that the WNHOME variable points to the root of the Wordnet 
+installation directory and the dictionary data directory “dict” must be 
+appended to this path.  Again, this may be different on your system depending 
+on where your Wordnet files are located.  The second block of code, two lines 
+long (12-13), constructs an instance of the default Dictionary object, and 
+opens it by calling the {@code open()} method.  The final block of six lines 
+(16-21) demonstrates searching the dictionary for the first sense of the noun 
+“dog”. The final numbered block of code shows the console output of the method.
+<p>
+Sample Dictionary code:
+<pre>
+1  public void runExample(){
+2    
+3     // construct the URL to the Wordnet dictionary directory
+4     String wnhome = System.getenv("WNHOME");
+5     String path = wnhome + File.separator + "dict";
+6     URL url = null;
+7     try{ url = new URL("file", null, path); } 
+8     catch(MalformedURLException e){ e.printStackTrace(); }
+9     if(url == null) return;
+10    
+11    // construct the dictionary object and open it
+12    IDictionary dict = new Dictionary(url);
+13    dict.open();
+14
+15    // look up first sense of the word "dog"
+16    IIndexWord idxWord = dict.getIndexWord("dog", POS.NOUN);
+17    IWordID wordID = idxWord.getWordIDs().get(0);
+18    IWord word = dict.getWord(wordID);
+19    System.out.println("Id = " + wordID);
+20    System.out.println("Lemma = " + word.getLemma());
+21    System.out.println("Gloss = " + word.getSynset().getGloss());
+22
+23  }
+</pre>
+
+Output (for Wordnet 3.0)
+<pre>
+1  Id = WID-2084071-n-?-dog
+2  Lemma = dog
+3  Gloss = a member of the genus Canis (probably descended from the common wolf) ...
+</pre>
+
+For more information, see the User's Guide included with the distribution.
+
+</body>
+</html>
