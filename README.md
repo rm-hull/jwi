@@ -11,3 +11,7 @@ as the initial repository.
 License
 -------
 See **jwi-license** file for details. All rights of original author reserved.
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/delver/jwi/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
