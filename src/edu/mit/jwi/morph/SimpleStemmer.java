@@ -1,5 +1,5 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.0
+ * MIT Java Wordnet Interface Library (JWI) v2.3.1
  * Copyright (c) 2007-2013 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
@@ -16,8 +16,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
@@ -70,7 +72,7 @@ import edu.mit.jwi.item.POS;
  * "boxesful", it will return "boxful".
  * 
  * @author Mark A. Finlayson
- * @version 2.3.0
+ * @version 2.3.1
  * @since JWI 1.0
  */
 public class SimpleStemmer implements IStemmer {
@@ -88,6 +90,7 @@ public class SimpleStemmer implements IStemmer {
 	public static final String SUFFIX_ing = "ing";
 	public static final String SUFFIX_men = "men";
 	public static final String SUFFIX_s = "s";
+	public static final String SUFFIX_ss = "ss";
 	public static final String SUFFIX_ses = "ses";
 	public static final String SUFFIX_shes = "shes";
 	public static final String SUFFIX_xes = "xes";
@@ -102,33 +105,67 @@ public class SimpleStemmer implements IStemmer {
 	public static final String ENDING_x = "x";
 	public static final String ENDING_y = "y";
 	public static final String ENDING_z = "z";
+	
+	public static final Map<POS, List<StemmingRule>> ruleMap;
+	
+	static {
+		Map<POS, List<StemmingRule>> ruleMapHidden = new TreeMap<POS,List<StemmingRule>>();
+		
+		List<StemmingRule> list;
+		
+		String[] sufs = null;
+		
+		// nouns
+		list = new ArrayList<StemmingRule>(8);
+		list.add(new StemmingRule(SUFFIX_s,    ENDING_null, POS.NOUN, SUFFIX_ss));
+		list.add(new StemmingRule(SUFFIX_ses,  ENDING_s,    POS.NOUN, sufs)); 
+		list.add(new StemmingRule(SUFFIX_xes,  ENDING_x,    POS.NOUN, sufs));
+		list.add(new StemmingRule(SUFFIX_zes,  ENDING_z,    POS.NOUN, sufs)); 
+		list.add(new StemmingRule(SUFFIX_ches, ENDING_ch,   POS.NOUN, sufs));
+		list.add(new StemmingRule(SUFFIX_shes, ENDING_sh,   POS.NOUN, sufs)); 
+		list.add(new StemmingRule(SUFFIX_men,  ENDING_man,  POS.NOUN, sufs));
+		list.add(new StemmingRule(SUFFIX_ies,  ENDING_y,    POS.NOUN, sufs));
+		ruleMapHidden.put(POS.NOUN, Collections.unmodifiableList(list));
 
-	String[][] nounMappings = new String[][] { 
-			new String[] { SUFFIX_s, ENDING_null },
-			new String[] { SUFFIX_ses, ENDING_s }, 
-			new String[] { SUFFIX_xes, ENDING_x },
-			new String[] { SUFFIX_zes, ENDING_z }, 
-			new String[] { SUFFIX_ches, ENDING_ch },
-			new String[] { SUFFIX_shes, ENDING_sh }, 
-			new String[] { SUFFIX_men, ENDING_man },
-			new String[] { SUFFIX_ies, ENDING_y }, };
-
-	String[][] verbMappings = new String[][] { 
-			new String[] { SUFFIX_s, ENDING_null },
-			new String[] { SUFFIX_ies, ENDING_y }, 
-			new String[] { SUFFIX_es, ENDING_e },
-			new String[] { SUFFIX_es, ENDING_null }, 
-			new String[] { SUFFIX_ed, ENDING_e },
-			new String[] { SUFFIX_ed, ENDING_null }, 
-			new String[] { SUFFIX_ing, ENDING_e },
-			new String[] { SUFFIX_ing, ENDING_null }, };
-
-	String[][] adjMappings = new String[][] { 
-			new String[] { SUFFIX_er, ENDING_e },
-			new String[] { SUFFIX_er, ENDING_null }, 
-			new String[] { SUFFIX_est, ENDING_e },
-			new String[] { SUFFIX_est, ENDING_null }, };
-
+		// verbs
+		list = new ArrayList<StemmingRule>(8);
+		list.add(new StemmingRule(SUFFIX_s,   ENDING_null, POS.VERB, sufs));
+		list.add(new StemmingRule(SUFFIX_ies, ENDING_y,    POS.VERB, sufs)); 
+		list.add(new StemmingRule(SUFFIX_es,  ENDING_e,    POS.VERB, sufs));
+		list.add(new StemmingRule(SUFFIX_es,  ENDING_null, POS.VERB, sufs)); 
+		list.add(new StemmingRule(SUFFIX_ed,  ENDING_e,    POS.VERB, sufs));
+		list.add(new StemmingRule(SUFFIX_ed,  ENDING_null, POS.VERB, sufs)); 
+		list.add(new StemmingRule(SUFFIX_ing, ENDING_e,    POS.VERB, sufs));
+		list.add(new StemmingRule(SUFFIX_ing, ENDING_null, POS.VERB, sufs));
+		ruleMapHidden.put(POS.VERB, Collections.unmodifiableList(list));
+		
+		// adjectives
+		list = new ArrayList<StemmingRule>(4);
+		list.add(new StemmingRule(SUFFIX_er,  ENDING_e,    POS.ADJECTIVE, sufs));
+		list.add(new StemmingRule(SUFFIX_er,  ENDING_null, POS.ADJECTIVE, sufs)); 
+		list.add(new StemmingRule(SUFFIX_est, ENDING_e,    POS.ADJECTIVE, sufs));
+		list.add(new StemmingRule(SUFFIX_est, ENDING_null, POS.ADJECTIVE, sufs));
+		ruleMapHidden.put(POS.ADJECTIVE, Collections.unmodifiableList(list));
+		
+		// adverbs
+		ruleMapHidden.put(POS.ADVERB, Collections.<StemmingRule>emptyList());
+		
+		// assign
+		ruleMap = Collections.unmodifiableMap(ruleMapHidden);
+	}
+	
+	/**
+	 * Returns a set of stemming rules used by this stemmer. Will not return a
+	 * null map, but it may be empty. The lists in the map will also not be
+	 * null, but may be empty.
+	 * 
+	 * @return the rule map for this stemmer
+	 * @since JWI 3.5.1
+	 */
+	public Map<POS, List<StemmingRule>> getRuleMap(){
+		return ruleMap;
+	}
+	
 	/* 
 	 * (non-Javadoc) 
 	 *
@@ -209,45 +246,30 @@ public class SimpleStemmer implements IStemmer {
 	 * @since JWI 1.0
 	 */
 	protected List<String> stripNounSuffix(final String noun) {
-
-		int len;
-		String word = noun;
 		
 		// strip off "ful"
-		boolean endsWithFUL = false;
+		String word = noun;
+		String suffix = null;
 		if(noun.endsWith(SUFFIX_ful)) {
-			endsWithFUL = true;
 			word = noun.substring(0, noun.length()-SUFFIX_ful.length());
-		}
-
-		// stem the word
-		SortedSet<String> result = new TreeSet<String>();
-		StringBuilder sb;
-		for (String[] mapping : nounMappings) {
-			if(!word.endsWith(mapping[0]))
-				continue;
-			
-			sb = new StringBuilder();
-			// we loop directly over characters here to avoid two loops
-			len = word.length()-mapping[0].length();
-			for (int i = 0; i < len; i++) 
-				sb.append(word.charAt(i));
-			sb.append(mapping[1]);
-			
-			// add back on "ful" if it was stripped
-			if (endsWithFUL) 
-				sb.append(SUFFIX_ful);
-			result.add(sb.toString());
+			suffix = SUFFIX_ful;
 		}
 		
-		// remove any empties
-		for(Iterator<String> i = result.iterator(); i.hasNext(); )
-			if(i.next().length() == 0)
-				i.remove();
+		// we will return this to the caller
+		SortedSet<String> result = new TreeSet<String>();
+		
+		// apply the rules
+		String root;
+		for (StemmingRule rule : getRuleMap().get(POS.NOUN)) {
+			root = rule.apply(word, suffix);
+			if(root != null && root.length() > 0)
+				result.add(root);
+		}
 		
 		return result.isEmpty() ? 
 				Collections.<String>emptyList() : 
 					new ArrayList<String>(result);
+		
 	}
 	
 	/**
@@ -340,25 +362,16 @@ public class SimpleStemmer implements IStemmer {
 	 */
 	protected List<String> stripVerbSuffix(final String verb) {
 		
+		// we will return this to the caller
 		SortedSet<String> result = new TreeSet<String>();
-		int len;
-		StringBuffer sb;
-		for (String[] mapping : verbMappings) {
-			if(!verb.endsWith(mapping[0]))
-				continue;
-			sb = new StringBuffer();
-			// we loop directly over characters here to avoid two loops
-			len = verb.length()-mapping[0].length();
-			for (int i = 0; i < len; i++) 
-				sb.append(verb.charAt(i));
-			sb.append(mapping[1]);
-			result.add(sb.toString());
-		}
 		
-		// remove any empties
-		for(Iterator<String> i = result.iterator(); i.hasNext(); )
-			if(i.next().length() == 0)
-				i.remove();
+		// apply the rules
+		String root;
+		for (StemmingRule rule : getRuleMap().get(POS.VERB)) {
+			root = rule.apply(verb);
+			if(root != null && root.length() > 0)
+				result.add(root);
+		}
 		
 		return result.isEmpty() ? 
 				Collections.<String>emptyList() : 
@@ -433,26 +446,17 @@ public class SimpleStemmer implements IStemmer {
 	 * @since JWI 1.0
 	 */
 	protected List<String> stripAdjectiveSuffix(final String adj) {
-
-		SortedSet<String> result = new TreeSet<String>();
-		int len;
-		StringBuffer sb;
-		for (String[] mapping : adjMappings) {
-			if(!adj.endsWith(mapping[0]))
-				continue;
-			sb = new StringBuffer();
-			// we loop directly over characters here to avoid two loops
-			len = adj.length()-mapping[0].length();
-			for (int i = 0; i < len; i++) 
-				sb.append(adj.charAt(i));
-			sb.append(mapping[1]);
-			result.add(sb.toString());
-		}
 		
-		// remove any empties
-		for(Iterator<String> i = result.iterator(); i.hasNext(); )
-			if(i.next().length() == 0)
-				i.remove();
+		// we will return this to the caller
+		SortedSet<String> result = new TreeSet<String>();
+		
+		// apply the rules
+		String root;
+		for (StemmingRule rule : getRuleMap().get(POS.ADJECTIVE)) {
+			root = rule.apply(adj);
+			if(root != null && root.length() > 0)
+				result.add(root);
+		}
 		
 		return result.isEmpty() ? 
 				Collections.<String>emptyList() : 

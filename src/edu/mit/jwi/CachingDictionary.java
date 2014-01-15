@@ -1,5 +1,5 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.0
+ * MIT Java Wordnet Interface Library (JWI) v2.3.1
  * Copyright (c) 2007-2013 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
@@ -39,7 +39,7 @@ import edu.mit.jwi.item.POS;
  * A dictionary that caches the results of another dictionary
  *
  * @author Mark A. Finlayson
- * @version 2.3.0
+ * @version 2.3.1
  * @since JWI 2.2.0
  */
 public class CachingDictionary implements ICachingDictionary {
@@ -350,7 +350,7 @@ public class CachingDictionary implements ICachingDictionary {
 	 * An LRU cache for objects in JWI.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.0
+	 * @version 2.3.1
 	 * @since JWI 2.2.0
 	 */
 	public static class ItemCache implements IItemCache {

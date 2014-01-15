@@ -1,5 +1,5 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.0
+ * MIT Java Wordnet Interface Library (JWI) v2.3.1
  * Copyright (c) 2007-2013 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
@@ -23,7 +23,7 @@ import java.util.Map;
  * from the actual file. This is not implemented as an {@code Enum} so that
  * clients can instantiate their own custom verb frame objects.
  * 
- * @version 2.3.0
+ * @version 2.3.1
  * @since JWI 2.1.0
  */
 public class VerbFrame implements IVerbFrame {

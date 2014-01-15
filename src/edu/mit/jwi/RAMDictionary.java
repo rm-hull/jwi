@@ -1,5 +1,5 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.0
+ * MIT Java Wordnet Interface Library (JWI) v2.3.1
  * Copyright (c) 2007-2013 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
@@ -59,7 +59,7 @@ import edu.mit.jwi.item.Word;
  * <code>-Xmx</code> switch.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.0
+ * @version 2.3.1
  * @since JWI 2.2.0
  */
 public class RAMDictionary implements IRAMDictionary {
@@ -1058,7 +1058,7 @@ public class RAMDictionary implements IRAMDictionary {
 		 * A utility class that allows us to build word objects
 		 *
 		 * @author Mark A. Finlayson
-		 * @version 2.3.0
+		 * @version 2.3.1
 		 * @since JWI 2.2.0
 		 */
 		public class WordBuilder implements IWordBuilder {

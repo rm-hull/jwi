@@ -1,5 +1,5 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.0
+ * MIT Java Wordnet Interface Library (JWI) v2.3.1
  * Copyright (c) 2007-2013 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
@@ -23,7 +23,7 @@ import java.util.Set;
  * Default implementation of the {@code ISynset} interface.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.0
+ * @version 2.3.1
  * @since JWI 1.0
  */
 public class Synset implements ISynset {
@@ -360,7 +360,7 @@ public class Synset implements ISynset {
 	 * constructor.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.0
+	 * @version 2.3.1
 	 * @since JWI 2.2.0
 	 */
     public interface IWordBuilder {
@@ -407,7 +407,7 @@ public class Synset implements ISynset {
 	 * Holds information about word objects before they are instantiated.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.0
+	 * @version 2.3.1
 	 * @since JWI 1.0
 	 */
 	public static class WordBuilder implements IWordBuilder {
