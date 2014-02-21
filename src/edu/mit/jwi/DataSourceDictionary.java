@@ -1,6 +1,6 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.1
- * Copyright (c) 2007-2013 Massachusetts Institute of Technology
+ * MIT Java Wordnet Interface Library (JWI) v2.3.3
+ * Copyright (c) 2007-2014 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
  * Unported License, which means it may be freely used for all purposes, as long 
@@ -46,7 +46,7 @@ import edu.mit.jwi.item.SynsetID;
  * specified, it uses the default implementation provided with the distribution.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.1
+ * @version 2.3.3
  * @since JWI 2.2.0
  */
 public class DataSourceDictionary implements IDataSourceDictionary {
@@ -143,7 +143,8 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 		IContentType<IIndexWord> content = resolveIndexContentType(id.getPOS());
 		IDataSource<?> file = provider.getSource(content);
 		String line = file.getLine(id.getLemma());
-		if (line == null) return null;
+		if (line == null)
+			return null;
 		return content.getDataType().getParser().parseLine(line);
 	}
 
@@ -156,7 +157,8 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 		checkOpen();
 		
 		ISynset synset = getSynset(id.getSynsetID());
-		if(synset == null) return null;
+		if(synset == null)
+			return null;
 		
 		// One or the other of the WordID number or lemma may not exist,
 		// depending on whence the word id came, so we have to check 
@@ -165,7 +167,8 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 			return synset.getWords().get(id.getWordNumber() - 1);
 		} else if (id.getLemma() != null) {
 			for(IWord word : synset.getWords()) {
-				if (word.getLemma().equalsIgnoreCase(id.getLemma())) return word;
+				if (word.getLemma().equalsIgnoreCase(id.getLemma()))
+					return word;
 			}
 			return null;
 		} else {

@@ -1,7 +1,7 @@
 jwi - Java Wordnet Interface
 ============================
 
-(Mavenized version of) JWI 2.3.1 - this git repo is intended to shadow 
+(Mavenized version of) JWI 2.3.3 - this git repo is intended to shadow 
 the latest source version from http://projects.csail.mit.edu/jwi/, but
 augment the code with a maven *pom.xml* file with http://repo.delver.io
 as the initial repository.

@@ -1,6 +1,6 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.1
- * Copyright (c) 2007-2013 Massachusetts Institute of Technology
+ * MIT Java Wordnet Interface Library (JWI) v2.3.3
+ * Copyright (c) 2007-2014 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
  * Unported License, which means it may be freely used for all purposes, as long 
@@ -59,7 +59,7 @@ import edu.mit.jwi.item.Synset;
  * </p>
  * 
  * @author Mark A. Finlayson
- * @version 2.3.1
+ * @version 2.3.3
  * @since JWI 1.0
  */
 public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
@@ -619,7 +619,7 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	 * A thread class which tries to load each data source in this provider.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.1
+	 * @version 2.3.3
 	 * @since JWI 2.2.0
 	 */
 	protected class JWIBackgroundLoader extends Thread {

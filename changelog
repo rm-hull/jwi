@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2007-2013 Massachusetts Institute of Technology.
+ * Copyright (c) 2007-2014 Massachusetts Institute of Technology.
  * All rights reserved.
  * 
  * This program and the accompanying materials are made available under the 
@@ -19,6 +19,12 @@ Changelog for edu.mit.jwi:
 
 Ver     : Release Date  : Changes
 =================================
+2.3.3   : Feb 12, 2014  : 1. Fixed Bug 023: RAMDictionary now properly handles underspecified word id objects
+----------------------------------
+2.3.2   : Dec 26, 2013  : 1. Fixed Bug 022: Minor changes to stemmer to correct lemma order and correctly handle nouns and verbs of two characters or fewer
+----------------------------------
+2.3.1   : Dec 09, 2013  : 1. Fixed Bug 021: Factored out IStemmingRule, and added check for nouns that end with 'ss'
+----------------------------------
 2.3.0   : Aug 28, 2013  : 1. Added IIndexWord.getPointers() method and IndexWord implementation thereof
                           2. Added two IndexWord constructors allowing setting of pointers field
                           3. Added IndexWordParser.resolvePointer(String, POS) method and its use in the parseLine(String) method
@@ -214,6 +220,9 @@ Ver     : Release Date  : Changes
 Bug Reports
 ID  : Priority : Reported  : Fixed in Ver : Description
 =======================================================
+023 : High     : 11 Feb 14 : 2.3.3  : RAMDictionary does not properly handle underspecified IWordID objects
+022 : Medium   : 17 Dec 13 : 2.3.2  : Stemmer does not properly handle two-character words or return lemmas in the same order as Morphy (reported by I. Huang)
+021 : Medium   : 03 Dec 13 : 2.3.1  : Stemmer does not properly handle nouns ending with 'ss' (reported by I. Huang)
 020 : High     : 24 Jun 13 : 2.2.6  : WordID toString() throws a NullPointerException when lemma=null (introduced when fixing Bug019, reported by M. Yahya)
 019 : Medium   : 08 Jun 13 : 2.2.5  : WordID hash code breaks hashCode() contract (reported by R. Passolini)
 018 : Medium   : 2012      : 2.2.4  : Dictionary throws NullPointerException when getExceptionIterator is called when exception files are missing

@@ -1,6 +1,6 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.1
- * Copyright (c) 2007-2013 Massachusetts Institute of Technology
+ * MIT Java Wordnet Interface Library (JWI) v2.3.3
+ * Copyright (c) 2007-2014 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
  * Unported License, which means it may be freely used for all purposes, as long 
@@ -13,9 +13,9 @@ package edu.mit.jwi.morph;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.Set;
 
 import edu.mit.jwi.IDictionary;
 import edu.mit.jwi.item.IExceptionEntry;
@@ -29,7 +29,7 @@ import edu.mit.jwi.item.POS;
  * result returned is the same as that of the {@code SimpleStemmer} class.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.1
+ * @version 2.3.3
  * @since JWI 1.0
  */
 public class WordnetStemmer extends SimpleStemmer {
@@ -74,21 +74,18 @@ public class WordnetStemmer extends SimpleStemmer {
     	if(pos == null) 
     		return super.findStems(word, null);
 
-        SortedSet<String> result = new TreeSet<String>();
+        Set<String> result = new LinkedHashSet<String>();
         
         // first look for the word in the exception lists
-        IExceptionEntry entry = dict.getExceptionEntry(word, pos);
-        boolean isException = false;
-        if (entry != null){
-        	isException = true;
-        	result.addAll(entry.getRootForms());
-        }
+        IExceptionEntry excEntry = dict.getExceptionEntry(word, pos);
+        if (excEntry != null)
+        	result.addAll(excEntry.getRootForms());
 
         // then look and see if it's in Wordnet; if so, the form itself is a stem
         if (dict.getIndexWord(word, pos) != null) 
         	result.add(word);
         
-        if(isException) 
+        if(excEntry != null) 
         	return new ArrayList<String>(result);
 
         // go to the simple stemmer and check and see if any of those stems are in WordNet
@@ -101,11 +98,8 @@ public class WordnetStemmer extends SimpleStemmer {
         
         // check each algorithmically obtained root to see if it's in WordNet
         for (String possible : possibles) {
-            if(dict.getIndexWord(possible, pos) != null){
-                if (result == null) 
-                	result = new TreeSet<String>();
+            if(dict.getIndexWord(possible, pos) != null)
                 result.add(possible);
-            }
         }
 
         if(result.isEmpty()) 

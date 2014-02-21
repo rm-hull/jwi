@@ -1,6 +1,6 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.1
- * Copyright (c) 2007-2013 Massachusetts Institute of Technology
+ * MIT Java Wordnet Interface Library (JWI) v2.3.3
+ * Copyright (c) 2007-2014 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
  * Unported License, which means it may be freely used for all purposes, as long 
@@ -18,9 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import edu.mit.jwi.item.POS;
@@ -72,7 +70,7 @@ import edu.mit.jwi.item.POS;
  * "boxesful", it will return "boxful".
  * 
  * @author Mark A. Finlayson
- * @version 2.3.1
+ * @version 2.3.3
  * @since JWI 1.0
  */
 public class SimpleStemmer implements IStemmer {
@@ -113,38 +111,38 @@ public class SimpleStemmer implements IStemmer {
 		
 		List<StemmingRule> list;
 		
-		String[] sufs = null;
+		String[] nullSuffixArray = null;
 		
 		// nouns
 		list = new ArrayList<StemmingRule>(8);
 		list.add(new StemmingRule(SUFFIX_s,    ENDING_null, POS.NOUN, SUFFIX_ss));
-		list.add(new StemmingRule(SUFFIX_ses,  ENDING_s,    POS.NOUN, sufs)); 
-		list.add(new StemmingRule(SUFFIX_xes,  ENDING_x,    POS.NOUN, sufs));
-		list.add(new StemmingRule(SUFFIX_zes,  ENDING_z,    POS.NOUN, sufs)); 
-		list.add(new StemmingRule(SUFFIX_ches, ENDING_ch,   POS.NOUN, sufs));
-		list.add(new StemmingRule(SUFFIX_shes, ENDING_sh,   POS.NOUN, sufs)); 
-		list.add(new StemmingRule(SUFFIX_men,  ENDING_man,  POS.NOUN, sufs));
-		list.add(new StemmingRule(SUFFIX_ies,  ENDING_y,    POS.NOUN, sufs));
+		list.add(new StemmingRule(SUFFIX_ses,  ENDING_s,    POS.NOUN, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_xes,  ENDING_x,    POS.NOUN, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_zes,  ENDING_z,    POS.NOUN, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_ches, ENDING_ch,   POS.NOUN, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_shes, ENDING_sh,   POS.NOUN, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_men,  ENDING_man,  POS.NOUN, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_ies,  ENDING_y,    POS.NOUN, nullSuffixArray));
 		ruleMapHidden.put(POS.NOUN, Collections.unmodifiableList(list));
 
 		// verbs
 		list = new ArrayList<StemmingRule>(8);
-		list.add(new StemmingRule(SUFFIX_s,   ENDING_null, POS.VERB, sufs));
-		list.add(new StemmingRule(SUFFIX_ies, ENDING_y,    POS.VERB, sufs)); 
-		list.add(new StemmingRule(SUFFIX_es,  ENDING_e,    POS.VERB, sufs));
-		list.add(new StemmingRule(SUFFIX_es,  ENDING_null, POS.VERB, sufs)); 
-		list.add(new StemmingRule(SUFFIX_ed,  ENDING_e,    POS.VERB, sufs));
-		list.add(new StemmingRule(SUFFIX_ed,  ENDING_null, POS.VERB, sufs)); 
-		list.add(new StemmingRule(SUFFIX_ing, ENDING_e,    POS.VERB, sufs));
-		list.add(new StemmingRule(SUFFIX_ing, ENDING_null, POS.VERB, sufs));
+		list.add(new StemmingRule(SUFFIX_s,   ENDING_null, POS.VERB, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_ies, ENDING_y,    POS.VERB, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_es,  ENDING_e,    POS.VERB, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_es,  ENDING_null, POS.VERB, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_ed,  ENDING_e,    POS.VERB, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_ed,  ENDING_null, POS.VERB, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_ing, ENDING_e,    POS.VERB, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_ing, ENDING_null, POS.VERB, nullSuffixArray));
 		ruleMapHidden.put(POS.VERB, Collections.unmodifiableList(list));
 		
 		// adjectives
 		list = new ArrayList<StemmingRule>(4);
-		list.add(new StemmingRule(SUFFIX_er,  ENDING_e,    POS.ADJECTIVE, sufs));
-		list.add(new StemmingRule(SUFFIX_er,  ENDING_null, POS.ADJECTIVE, sufs)); 
-		list.add(new StemmingRule(SUFFIX_est, ENDING_e,    POS.ADJECTIVE, sufs));
-		list.add(new StemmingRule(SUFFIX_est, ENDING_null, POS.ADJECTIVE, sufs));
+		list.add(new StemmingRule(SUFFIX_er,  ENDING_e,    POS.ADJECTIVE, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_er,  ENDING_null, POS.ADJECTIVE, nullSuffixArray)); 
+		list.add(new StemmingRule(SUFFIX_est, ENDING_e,    POS.ADJECTIVE, nullSuffixArray));
+		list.add(new StemmingRule(SUFFIX_est, ENDING_null, POS.ADJECTIVE, nullSuffixArray));
 		ruleMapHidden.put(POS.ADJECTIVE, Collections.unmodifiableList(list));
 		
 		// adverbs
@@ -222,16 +220,22 @@ public class SimpleStemmer implements IStemmer {
 	 */
 	protected String normalize(String word) {
 		
+		// make lowercase
+		word = word.toLowerCase();
+		
+		// replace all underscores with spaces
+		word = word.replace('_', ' ');
+		
+		// trim off extra whitespace
 		word = word.trim();
 		if(word.length() == 0)
 			throw new IllegalArgumentException();
 		
-		for (int i = 0; i < word.length(); i++)
-			if (Character.isWhitespace(word.charAt(i))){
-				word = whitespace.matcher(word).replaceAll(underscore); 
-				break;
-			}
-		return word.toLowerCase();
+		// replace all whitespace with underscores
+		word = whitespace.matcher(word).replaceAll(underscore); 
+
+		// return normalized word
+		return word;
 	}
 
 	/**
@@ -247,6 +251,9 @@ public class SimpleStemmer implements IStemmer {
 	 */
 	protected List<String> stripNounSuffix(final String noun) {
 		
+		if(noun.length() <= 2)
+			return Collections.<String>emptyList();
+		
 		// strip off "ful"
 		String word = noun;
 		String suffix = null;
@@ -256,7 +263,7 @@ public class SimpleStemmer implements IStemmer {
 		}
 		
 		// we will return this to the caller
-		SortedSet<String> result = new TreeSet<String>();
+		Set<String> result = new LinkedHashSet<String>();
 		
 		// apply the rules
 		String root;
@@ -338,7 +345,7 @@ public class SimpleStemmer implements IStemmer {
 			return Collections.<String>emptyList();
 		
 		// make sure to remove empties
-		SortedSet<String> result = new TreeSet<String>();
+		Set<String> result = new LinkedHashSet<String>();
 		String root;
 		for(StringBuffer p : poss){
 			root = p.toString().trim();
@@ -362,8 +369,11 @@ public class SimpleStemmer implements IStemmer {
 	 */
 	protected List<String> stripVerbSuffix(final String verb) {
 		
+		if(verb.length() <= 2)
+			return Collections.<String>emptyList();
+		
 		// we will return this to the caller
-		SortedSet<String> result = new TreeSet<String>();
+		Set<String> result = new LinkedHashSet<String>();
 		
 		// apply the rules
 		String root;
@@ -401,7 +411,7 @@ public class SimpleStemmer implements IStemmer {
 		for(int i = 0; i < parts.length; i++)
 			rootSets.add(findStems(parts[i], POS.VERB));
 		
-		SortedSet<String> result = new TreeSet<String>();
+		Set<String> result = new LinkedHashSet<String>();
 		
 		// form all combinations
 		StringBuffer rootBuffer = new StringBuffer();
@@ -448,7 +458,7 @@ public class SimpleStemmer implements IStemmer {
 	protected List<String> stripAdjectiveSuffix(final String adj) {
 		
 		// we will return this to the caller
-		SortedSet<String> result = new TreeSet<String>();
+		Set<String> result = new LinkedHashSet<String>();
 		
 		// apply the rules
 		String root;

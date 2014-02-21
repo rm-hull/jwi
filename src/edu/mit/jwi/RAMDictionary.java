@@ -1,6 +1,6 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.1
- * Copyright (c) 2007-2013 Massachusetts Institute of Technology
+ * MIT Java Wordnet Interface Library (JWI) v2.3.3
+ * Copyright (c) 2007-2014 Massachusetts Institute of Technology
  *
  * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
  * Unported License, which means it may be freely used for all purposes, as long 
@@ -59,7 +59,7 @@ import edu.mit.jwi.item.Word;
  * <code>-Xmx</code> switch.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.1
+ * @version 2.3.3
  * @since JWI 2.2.0
  */
 public class RAMDictionary implements IRAMDictionary {
@@ -320,7 +320,25 @@ public class RAMDictionary implements IRAMDictionary {
 	public IWord getWord(IWordID id) {
 		if(data != null){
 			ISynset synset = data.synsets.get(id.getPOS()).get(id.getSynsetID());
-			return (synset == null) ? null : synset.getWord(id.getWordNumber());
+			
+			// no synset found
+			if(synset == null)
+				return null;
+			
+			// Fix for BUG One or the other of the WordID number or lemma may not exist,
+			// depending on whence the word id came, so we have to check 
+			// them before trying.
+			if (id.getWordNumber() > 0) {
+				return synset.getWord(id.getWordNumber());
+			} else if (id.getLemma() != null) {
+				for(IWord word : synset.getWords()) {
+					if (word.getLemma().equalsIgnoreCase(id.getLemma()))
+						return word;
+				}
+				return null;
+			} else {
+				throw new IllegalArgumentException("Not enough information in IWordID instance to retrieve word.");
+			}
 		} else {
 			return backing.getWord(id);
 		}
@@ -1058,7 +1076,7 @@ public class RAMDictionary implements IRAMDictionary {
 		 * A utility class that allows us to build word objects
 		 *
 		 * @author Mark A. Finlayson
-		 * @version 2.3.1
+		 * @version 2.3.3
 		 * @since JWI 2.2.0
 		 */
 		public class WordBuilder implements IWordBuilder {
