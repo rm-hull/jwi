@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
@@ -23,7 +23,7 @@ import java.util.Comparator;
  * @param <T>
  *            the type of object represented in this data resource
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.0.0
  */
 public class BinarySearchWordnetFile<T> extends WordnetFile<T> {
@@ -72,7 +72,7 @@ public class BinarySearchWordnetFile<T> extends WordnetFile<T> {
 				
 				// back up to the beginning of the line
 				rewindToLineStart(buffer);
-				line = getLine(buffer);
+				line = getLine(buffer, getContentType().getCharset());
 				
 				// if we get a null, we've reached the end of the file
 				cmp = (line == null) ? 1 : fComparator.compare(line, key);
@@ -109,7 +109,7 @@ public class BinarySearchWordnetFile<T> extends WordnetFile<T> {
 	 * will throw an {@link UnsupportedOperationException}.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.3
+	 * @version 2.4.0
 	 * @since JWI 2.0.0
 	 */
 	public class BinarySearchLineIterator extends LineIterator {
@@ -147,9 +147,9 @@ public class BinarySearchWordnetFile<T> extends WordnetFile<T> {
 				while (start + 1 < stop) {
 					midpoint = (start + stop) / 2;
 					itrBuffer.position(midpoint);
-					line = getLine(itrBuffer);
+					line = getLine(itrBuffer, getContentType().getCharset());
 					offset = itrBuffer.position();
-					line = getLine(itrBuffer);
+					line = getLine(itrBuffer, getContentType().getCharset());
 					
 					// Fix for Bug009: If the line is null, we've reached
 					// the end of the file, so just advance to the first line
@@ -182,7 +182,7 @@ public class BinarySearchWordnetFile<T> extends WordnetFile<T> {
 				// with the pattern
 				if (lastOffset > -1) {
 					itrBuffer.position(lastOffset);
-					next = getLine(itrBuffer);
+					next = getLine(itrBuffer, getContentType().getCharset());
 					return;
 				}
 

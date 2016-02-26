@@ -1,23 +1,25 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.item;
+
+import java.io.Serializable;
 
 /** 
  * A Wordnet version.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.1.0
  */
-public interface IVersion {
+public interface IVersion extends Serializable {
 	
 	/** 
 	 * Returns the major version number, i.e., the '1' in '1.7.2'.
@@ -60,6 +62,15 @@ public interface IVersion {
 	 */
 	public static final IVersion NO_VERSION = new IVersion(){
 
+		/**
+		 * This serial version UID identifies the last version of JWI whose
+		 * serialized instances of the NO_VERSION instance are compatible with this
+		 * implementation.
+		 * 
+		 * @since JWI 2.4.0
+		 */
+		private static final long serialVersionUID = 240;
+
 		/* 
 		 * (non-Javadoc) 
 		 *
@@ -94,6 +105,17 @@ public interface IVersion {
 		 */
 		public String getQualifier() {
 			throw new UnsupportedOperationException();
+		}
+		
+		/**
+		 * Deserialization implementation. When deserializing this object, make
+		 * sure to return the singleton object.
+		 *
+		 * @return the singleton dummy version object.
+		 * @since JWI 2.4.0
+		 */
+		protected Object readResolve(){
+			return IVersion.NO_VERSION;
 		}
 		
 	};

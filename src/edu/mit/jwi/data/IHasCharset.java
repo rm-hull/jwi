@@ -8,25 +8,26 @@
  * included with this distribution for more details.
  *******************************************************************************/
 
-package edu.mit.jwi.item;
+package edu.mit.jwi.data;
 
-/**
- * A unique identifier for a synset,
- * sufficient to retrieve it from the Wordnet database. It consists of a
- * part of speech and an offset.
- * 
+import java.nio.charset.Charset;
+
+
+/** 
+ * Classes implementing this interface have an associated Charset.
+ *
  * @author Mark A. Finlayson
  * @version 2.4.0
- * @since JWI 1.0
+ * @since JWI 2.3.4
  */
-public interface ISynsetID extends IHasPOS, IItemID<ISynset> {
-
-	/**
-	 * Returns the offset for the specified synset.
-	 * 
-	 * @return the byte offset for the specified synset
-	 * @since JWI 1.0
+public interface IHasCharset {
+	
+	/** 
+	 * Returns the character set associated with this object.  May be <code>null</code>.
+	 *
+	 * @return the Charset associated this object, possibly <code>null</code>
+	 * @since JWI 2.3.4
 	 */
-	public int getOffset();
+	public Charset getCharset();
 
 }

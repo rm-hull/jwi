@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.item;
@@ -23,10 +23,19 @@ import java.util.Map;
  * from the actual file. This is not implemented as an {@code Enum} so that
  * clients can instantiate their own custom verb frame objects.
  * 
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.1.0
  */
 public class VerbFrame implements IVerbFrame {
+	
+	/**
+	 * This serial version UID identifies the last version of JWI whose
+	 * serialized instances of the VerbFrame class are compatible with this
+	 * implementation.
+	 * 
+	 * @since JWI 2.4.0
+	 */
+	private static final long serialVersionUID = 240;
 	
 	// standard verb frames
 	public static final VerbFrame NUM_01 = new VerbFrame(1, "Something ----s");
@@ -121,6 +130,20 @@ public class VerbFrame implements IVerbFrame {
 		return "[" + num + " : " + template + " ]";
 	}
 	
+	/**
+	 * This utility method implements the appropriate deserialization for this
+	 * object.
+	 *
+	 * @return the appropriate deserialized object.
+	 * @since JWI 2.4.0
+	 */
+	protected Object readResolve(){
+		VerbFrame staticFrame = getFrame(num);
+		return (staticFrame == null) ?
+				this : 
+					staticFrame;
+	}
+	
 	// verb frame cache
 	private static final Map<Integer, VerbFrame> verbFrameMap;
 	
@@ -177,5 +200,7 @@ public class VerbFrame implements IVerbFrame {
     public static VerbFrame getFrame(int number) {
     	return verbFrameMap.get(number);
     }
+    
+    
 
 }

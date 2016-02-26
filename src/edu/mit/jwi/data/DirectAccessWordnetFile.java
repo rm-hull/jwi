@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
  * @param <T>
  *            the type of object represented in this data resource
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.0.0
  */
 public class DirectAccessWordnetFile<T> extends WordnetFile<T> {
@@ -44,6 +44,8 @@ public class DirectAccessWordnetFile<T> extends WordnetFile<T> {
 		super(file, contentType);
 	}
 	
+
+	
 	/* 
 	 * (non-Javadoc) 
 	 *
@@ -57,7 +59,7 @@ public class DirectAccessWordnetFile<T> extends WordnetFile<T> {
 				if(buffer.limit() <= byteOffset) 
 					return null; 
 				buffer.position(byteOffset);
-				String line = getLine(buffer);
+				String line = getLine(buffer, getContentType().getCharset());
 				return line.startsWith(key) ? line : null;
 			} catch(NumberFormatException e){
 				return null;
@@ -80,7 +82,7 @@ public class DirectAccessWordnetFile<T> extends WordnetFile<T> {
 	 * will throw an {@link UnsupportedOperationException}.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.3
+	 * @version 2.4.0
 	 * @since JWI 2.0.0
 	 */
 	public class DirectLineIterator extends LineIterator {
@@ -114,7 +116,7 @@ public class DirectAccessWordnetFile<T> extends WordnetFile<T> {
 					if(itrBuffer.limit() <= byteOffset) 
 						return; 
 					itrBuffer.position(byteOffset);
-					next = getLine(itrBuffer);
+					next = getLine(itrBuffer, getContentType().getCharset());
 				} catch(NumberFormatException e){
 					// Ignore
 				}

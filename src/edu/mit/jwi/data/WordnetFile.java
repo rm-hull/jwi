@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.locks.Lock;
@@ -42,7 +43,7 @@ import edu.mit.jwi.item.Version;
  * @param <T>
  *            the type of the objects represented in this file
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 1.0
  */
 public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
@@ -266,7 +267,7 @@ public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
 		}
 		return (version == IVersion.NO_VERSION) ? null : version;
 	}
-
+	
 	/* 
 	 * (non-Javadoc) 
 	 *
@@ -337,7 +338,7 @@ public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
 			return false;
 		return true;
 	}
-
+	
 	/**
 	 * Returns the String from the current position up to, but not including,
 	 * the next newline. The buffer's position is set to either directly after
@@ -355,14 +356,15 @@ public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
 	 * @since JWI 2.1.0
 	 */
 	public static String getLine(ByteBuffer buf){
+
+		// we are at end of buffer, return null
+		int limit = buf.limit();
+		if(buf.position() == limit)
+			return null;
+		
 		StringBuilder input = new StringBuilder();
 		char c;
 		boolean eol = false;
-		int limit = buf.limit();
-		
-		// we are at end of buffer, return null
-		if(buf.position() == limit)
-			return null;
 		
 		while(!eol && buf.position() < limit) {
 			c = (char)buf.get();
@@ -384,6 +386,68 @@ public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
 		}
 	
 		return input.toString();
+	}
+	
+	/**
+	 * A different version of the getLine method that uses a specified character
+	 * set to decode the byte stream. If the provided character set is
+	 * <code>null</code>, the method defaults to the previous method
+	 * {@link #getLine(ByteBuffer)}.
+	 * 
+	 * @param buf
+	 *            the buffer from which the line should be extracted
+	 * @param cs
+	 *            the character set to use for decoding; may be
+	 *            <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified buffer is <code>null</code>
+	 * @return the remainder of line in the specified buffer, starting from the
+	 *         buffer's current position
+	 * @since JWI 2.3.4
+	 */
+	public static String getLine(ByteBuffer buf, Charset cs){
+		
+		// redirect to old method if no charset specified
+		if(cs == null)
+			return getLine(buf);
+		
+		// if we are at end of buffer, return null
+		int limit = buf.limit();
+		if(buf.position() == limit)
+			return null;
+		
+		// here we assume that in the character set of the buffer
+		// new lines are encoded using the standard ASCII encoding scheme
+		// e.g., the single bytes 0x0A or 0x0D, or the two-byte sequence
+		// 0x0D0A.  If the byte buffer doesn't follow these conventions,
+		// this method will fail.
+		byte b;
+		boolean eol = false;
+		int start = buf.position();	
+		int end = start;
+		while(!eol && buf.position() < limit) {
+			b = buf.get();
+		    switch (b) {
+			    case 0x0A: // newline \n = 0x0A = 10
+					eol = true;
+					break;
+			    case 0x0D: // carriage return \r = 0x0D = 13
+					eol = true;
+					int cur = buf.position();
+					b = buf.get();
+					if(b != 0x0A) // check for following newline
+						buf.position(cur);
+					break;
+			    default:
+					end++;
+		    }
+		}
+		
+		// get sub view containing only the bytes of interest
+		buf = (ByteBuffer)buf.duplicate().position(start).limit(end);
+		
+		// decode the buffer using the provided character set
+		return cs.decode(buf).toString();
 	}
 	
 	/**
@@ -431,7 +495,7 @@ public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
 	 * throws an {@link UnsupportedOperationException}.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.3
+	 * @version 2.4.0
 	 * @since JWI 1.0
 	 */
 	protected abstract class LineIterator implements Iterator<String> {
@@ -519,7 +583,7 @@ public abstract class WordnetFile<T> implements ILoadableDataSource<T> {
 			
 			String line;
 			do {
-				line = getLine(itrBuffer);
+				line = getLine(itrBuffer, type.getCharset());
 			} while (line != null && isComment(line));
 			next = line;
 		}

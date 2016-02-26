@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.item;
@@ -27,10 +27,19 @@ import java.util.Map;
  * instantiate their own lexical file objects using this implementation.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.1.0
  */
 public class LexFile implements ILexFile {
+	
+	/**
+	 * This serial version UID identifies the last version of JWI whose
+	 * serialized instances of the LexFile class are compatible with this
+	 * implementation.
+	 * 
+	 * @since JWI 2.4.0
+	 */
+	private static final long serialVersionUID = 240;
 	
 	public static final LexFile ADJ_ALL 			= new LexFile(0, 	"adj.all", 				"all adjective clusters", 								POS.ADJECTIVE);
 	public static final LexFile ADJ_PERT 			= new LexFile(1, 	"adj.pert", 			"relational adjectives (pertainyms)", 					POS.ADJECTIVE);
@@ -202,6 +211,20 @@ public class LexFile implements ILexFile {
 		} else if (!pos.equals(other.getPOS()))
 			return false;
 		return true;
+	}
+
+	/**
+	 * This utility method implements the appropriate deserialization for this
+	 * object.
+	 *
+	 * @return the appropriate deserialized object.
+	 * @since JWI 2.4.0
+	 */
+	protected Object readResolve(){
+		LexFile lexFile = getLexicalFile(num);
+		return this.equals(lexFile) ?
+				lexFile : 
+					this;
 	}
 	
 	/**

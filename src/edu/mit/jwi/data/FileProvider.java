@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
@@ -18,15 +18,18 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,6 +38,7 @@ import edu.mit.jwi.RAMDictionary;
 import edu.mit.jwi.data.parse.ILineParser;
 import edu.mit.jwi.item.ISynset;
 import edu.mit.jwi.item.IVersion;
+import edu.mit.jwi.item.POS;
 import edu.mit.jwi.item.Synset;
 
 /**
@@ -59,7 +63,7 @@ import edu.mit.jwi.item.Synset;
  * </p>
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 1.0
  */
 public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
@@ -67,7 +71,7 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	// final instance fields
 	private final Lock lifecycleLock = new ReentrantLock();
 	private final Lock loadingLock = new ReentrantLock();
-	private final Set<IContentType<?>> types;
+	private final Map<IContentType<?>, IContentType<?>> prototypeMap;
 
 	// instance fields 
 	private URL url = null;
@@ -75,6 +79,7 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	private Map<IContentType<?>, ILoadableDataSource<?>> fileMap = null;
 	private int loadPolicy = NO_LOAD;
 	private transient JWIBackgroundLoader loader = null;
+	private Charset charset = null;
 	
 	/**
 	 * Constructs the file provider pointing to the resource indicated by the
@@ -193,7 +198,11 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 			throw new IllegalArgumentException();
 		this.url = url;
 		this.loadPolicy = loadPolicy;
-		this.types = Collections.unmodifiableSet(new HashSet<IContentType<?>>(types));
+		
+		Map<IContentType<?>, IContentType<?>> prototypeMap = new LinkedHashMap<IContentType<?>, IContentType<?>>(types.size());
+		for(IContentType<?> type : types)
+			prototypeMap.put(type, type);
+		this.prototypeMap = prototypeMap;
 	}
 
 	/*
@@ -285,6 +294,56 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 		}
 		
 		return ver;
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IHasCharset#getCharset()
+	 */
+	public Charset getCharset() {
+		return charset;
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IDataProvider#setCharset(java.nio.charset.Charset)
+	 */
+	@SuppressWarnings ({ "rawtypes", "unchecked" })
+	public void setCharset(Charset charset) {
+		try {
+			lifecycleLock.lock();
+			if(isOpen()) 
+				throw new IllegalStateException("provider currently open");
+			if(charset == null){
+				// if we get a null charset, reset to the prototypes
+				for(Entry<IContentType<?>, IContentType<?>> e : prototypeMap.entrySet())
+					e.setValue(e.getKey());
+				return;
+			} else {
+				// if we get a non-null charset, generate
+				// a new set of types using the new charset
+				for(Entry<IContentType<?>, IContentType<?>> e : prototypeMap.entrySet())
+					e.setValue(new ContentType(e.getKey().getDataType(), e.getKey().getPOS(), e.getKey().getLineComparator(), charset));
+			}
+		} finally {
+			lifecycleLock.unlock();
+		}
+		
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IDataProvider#resolveContentType(edu.mit.jwi.data.IDataType, edu.mit.jwi.item.POS)
+	 */
+	@SuppressWarnings ("unchecked")
+	public <T> IContentType<T> resolveContentType(IDataType<T> dt, POS pos) {
+		for(Entry<IContentType<?>, IContentType<?>> e : prototypeMap.entrySet())
+			if(e.getKey().getDataType().equals(dt) && e.getKey().getPOS() == pos)
+				return (IContentType<T>)e.getValue();
+		return null;
 	}
 
 	/* 
@@ -424,9 +483,10 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	protected Map<IContentType<?>, ILoadableDataSource<?>> createSourceMap(List<File> files, int policy) throws IOException {
 		Map<IContentType<?>, ILoadableDataSource<?>> result = new HashMap<IContentType<?>, ILoadableDataSource<?>>();
 		File file;
-		for (IContentType<?> type : types) {
+		for (IContentType<?> type : prototypeMap.values()) {
 			file = DataType.find(type.getDataType(), type.getPOS(), files);
-			if(file == null) continue;
+			if(file == null)
+				continue;
 			files.remove(file);
 			result.put(type, createDataSource(file, type, policy));
 		}
@@ -474,7 +534,8 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 			// get first line
 			Iterator<String> itr = src.iterator();
 			String firstLine = itr.next();
-			if(firstLine == null) return src;
+			if(firstLine == null)
+				return src;
 			
 			// extract key
 			ILineParser<T> parser = type.getDataType().getParser();
@@ -483,7 +544,8 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 			
 			// try to find line by direct access
 			String soughtLine = src.getLine(key);
-			if(soughtLine != null) return src;
+			if(soughtLine != null)
+				return src;
 			
 			System.err.println(System.currentTimeMillis() + " - Error on direct access in " + type.getPOS().toString() + " data file: check CR/LF endings");
 		}
@@ -603,7 +665,15 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	@SuppressWarnings("unchecked") 
 	public <T> ILoadableDataSource<T> getSource(IContentType<T> type) {
 		checkOpen();
-		return (ILoadableDataSource<T>)fileMap.get(type);
+		
+		// assume at first this the prototype
+		IContentType<?> actualType = prototypeMap.get(type);
+		
+		// if this does not map to an adjusted type, we will check under it directly
+		if(actualType == null)
+			actualType = type;
+		
+		return (ILoadableDataSource<T>)fileMap.get(actualType);
 	}
 
 	/* 
@@ -612,14 +682,19 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	 * @see edu.mit.jwi.data.IDataProvider#getTypes()
 	 */
 	public Set<? extends IContentType<?>> getTypes() {
-		return types;
+		try {
+			lifecycleLock.lock();
+			return new LinkedHashSet<IContentType<?>>(prototypeMap.values());
+		} finally {
+			lifecycleLock.unlock();
+		}
 	}
 
 	/**
 	 * A thread class which tries to load each data source in this provider.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.3
+	 * @version 2.4.0
 	 * @since JWI 2.2.0
 	 */
 	protected class JWIBackgroundLoader extends Thread {
@@ -688,7 +763,7 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 	 *             if the url does not use the 'file' protocol
 	 * @since JWI 1.0
 	 */
-	public static File toFile(URL url) throws IOException {
+	public static File toFile(URL url) {
 		if(!url.getProtocol().equals("file")) 
 			throw new IllegalArgumentException("URL source must use 'file' protocol");
 		try {
@@ -721,6 +796,43 @@ public class FileProvider implements IDataProvider, ILoadable, ILoadPolicy {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	/**
+	 * A utility method for checking whether a file represents an existing local
+	 * directory.
+	 * 
+	 * @param url
+	 *            the url object to check, may not be <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified url object is <code>null</code>
+	 * @return <code>true</code> if the url object represents a local directory
+	 *         which exists; <code>false</code> otherwise.
+	 * @since JWI 2.4.0
+	 */
+	public static boolean isLocalDirectory(URL url) {
+		if(!url.getProtocol().equals("file"))
+			return false;
+		File file = FileProvider.toFile(url);
+		if(file == null)
+			return false;
+		return isLocalDirectory(file);
+	}
+	
+	/**
+	 * A utility method for checking whether a file represents an existing local
+	 * directory.
+	 * 
+	 * @param dir
+	 *            the file object to check, may not be <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified file object is <code>null</code>
+	 * @return <code>true</code> if the file object represents a local directory
+	 *         which exist; <code>false</code> otherwise.
+	 * @since JWI 2.4.0
+	 */
+	public static boolean isLocalDirectory(File dir) {
+		return dir.exists() && dir.isDirectory();
 	}
 
 }

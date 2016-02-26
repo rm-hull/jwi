@@ -1,20 +1,21 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Iterator;
 
-import edu.mit.jwi.data.ContentType;
+import edu.mit.jwi.data.DataType;
 import edu.mit.jwi.data.IContentType;
 import edu.mit.jwi.data.IDataProvider;
 import edu.mit.jwi.data.IDataSource;
@@ -46,7 +47,7 @@ import edu.mit.jwi.item.SynsetID;
  * specified, it uses the default implementation provided with the distribution.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.2.0
  */
 public class DataSourceDictionary implements IDataSourceDictionary {
@@ -60,7 +61,8 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	 *             if the specified data provider is <code>null</code>
 	 */
 	public DataSourceDictionary(IDataProvider provider) {
-		if(provider == null) throw new NullPointerException();
+		if(provider == null)
+			throw new NullPointerException();
 		this.provider = provider;
 	}
 
@@ -119,7 +121,26 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	 *             if the dictionary is closed.
 	 */
 	protected void checkOpen() {
-		if(!isOpen()) throw new ObjectClosedException();
+		if(!isOpen())
+			throw new ObjectClosedException();
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IHasCharset#getCharset()
+	 */
+	public Charset getCharset() {
+		return provider.getCharset();
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.IDictionary#setCharset(java.nio.charset.Charset)
+	 */
+	public void setCharset(Charset charset) {
+		provider.setCharset(charset);
 	}
 
 	/*
@@ -140,7 +161,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	 */
 	public IIndexWord getIndexWord(IIndexWordID id) {
 		checkOpen();
-		IContentType<IIndexWord> content = resolveIndexContentType(id.getPOS());
+		IContentType<IIndexWord> content = provider.resolveContentType(DataType.INDEX, id.getPOS());
 		IDataSource<?> file = provider.getSource(content);
 		String line = file.getLine(id.getLemma());
 		if (line == null)
@@ -228,7 +249,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	 */
 	public ISenseEntry getSenseEntry(ISenseKey key) {
 		checkOpen();
-		IContentType<ISenseEntry> content = resolveSenseContentType();
+		IContentType<ISenseEntry> content = provider.resolveContentType(DataType.SENSE, null);
 		IDataSource<ISenseEntry> file = provider.getSource(content);
 		String line = file.getLine(key.toString());
 		if (line == null) return null;
@@ -242,7 +263,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	 */
 	public ISynset getSynset(ISynsetID id) {
 		checkOpen();
-		IContentType<ISynset> content = resolveDataContentType(id.getPOS());
+		IContentType<ISynset> content = provider.resolveContentType(DataType.DATA, id.getPOS());
 		IDataSource<ISynset> file = provider.getSource(content);
 		String zeroFilledOffset = Synset.zeroFillOffset(id.getOffset());
 		String line = file.getLine(zeroFilledOffset);
@@ -310,7 +331,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	 */
 	public IExceptionEntry getExceptionEntry(IExceptionEntryID id) {
 		checkOpen();
-		IContentType<IExceptionEntryProxy> content = resolveExceptionContentType(id.getPOS());
+		IContentType<IExceptionEntryProxy> content = provider.resolveContentType(DataType.EXCEPTION, id.getPOS());
 		IDataSource<IExceptionEntryProxy> file = provider.getSource(content);
 		// fix for bug 010
 		if(file == null) 
@@ -324,37 +345,6 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 		return new ExceptionEntry(proxy, id.getPOS());
 	}
 	
-	/** 
-	 * This method retrieves the appropriate content type for exception entries,
-	 * and is marked protected for ease of subclassing.
-	 */
-	protected IContentType<IIndexWord> resolveIndexContentType(POS pos){
-		return ContentType.getIndexContentType(pos);
-	}
-	
-	/** 
-	 * This method retrieves the appropriate content type for exception entries,
-	 * and is marked protected for ease of subclassing.
-	 */
-	protected IContentType<ISynset> resolveDataContentType(POS pos){
-		return ContentType.getDataContentType(pos);
-	}
-	
-	/** 
-	 * This method retrieves the appropriate content type for exception entries,
-	 * and is marked protected for ease of subclassing.
-	 */
-	protected IContentType<IExceptionEntryProxy> resolveExceptionContentType(POS pos){
-		return ContentType.getExceptionContentType(pos);
-	}
-	
-	/** 
-	 * This method retrieves the appropriate content type for sense entries,
-	 * and is marked protected for ease of subclassing.
-	 */
-	protected IContentType<ISenseEntry> resolveSenseContentType(){
-		return ContentType.SENSE;
-	}
 
 	/*
 	 * (non-Javadoc)
@@ -511,7 +501,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 		}
 
 		public IndexFileIterator(POS pos, String pattern) {
-			super(resolveIndexContentType(pos), pattern);
+			super(provider.resolveContentType(DataType.INDEX, pos), pattern);
 		}
 
 		/*
@@ -531,7 +521,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	public class SenseEntryFileIterator extends FileIterator2<ISenseEntry> {
 
 		public SenseEntryFileIterator() {
-			super(resolveSenseContentType());
+			super(provider.resolveContentType(DataType.SENSE, null));
 		}
 
 		/*
@@ -551,7 +541,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	public class DataFileIterator extends FileIterator2<ISynset> {
 
 		public DataFileIterator(POS pos) {
-			super(resolveDataContentType(pos));
+			super(provider.resolveContentType(DataType.DATA, pos));
 		}
 
 		/*
@@ -577,7 +567,7 @@ public class DataSourceDictionary implements IDataSourceDictionary {
 	public class ExceptionFileIterator extends FileIterator<IExceptionEntryProxy, IExceptionEntry> {
 
 		public ExceptionFileIterator(POS pos) {
-			super(resolveExceptionContentType(pos));
+			super(provider.resolveContentType(DataType.EXCEPTION, pos));
 		}
 
 		/*

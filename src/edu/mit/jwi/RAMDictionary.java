@@ -1,18 +1,26 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,6 +31,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import edu.mit.jwi.data.FileProvider;
 import edu.mit.jwi.data.ILoadPolicy;
@@ -49,73 +59,86 @@ import edu.mit.jwi.item.Synset.IWordBuilder;
 import edu.mit.jwi.item.Word;
 
 /**
+ * <p>
  * Default implementation of the <code>IRAMDictionary</code> interface. This
  * implementation is designed to wrap an arbitrary dictionary object; however,
- * convenience constructors are provided for the most common use cases (i.e.,
- * Wordnet located on the local filesystem, pointed to by a URL or File).
+ * convenience constructors are provided for the most common use cases:
+ * <ul>
+ * <li>Wordnet files located on the local file system</li>
+ * <li>Wordnet data to be loaded into memory from an exported stream</li>
+ * </ul>
+ * </p>
  * <p>
  * <b>Note:</b> If you receive an {@link OutOfMemoryError} while using this
- * object, try increasing the heap size of your JVM, for example, by using the
- * <code>-Xmx</code> switch.
+ * object (this can occur on 32 bit JVMs), try increasing your heap size, for 
+ * example, by using the <code>-Xmx</code> switch.
+ * </p>
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.2.0
  */
 public class RAMDictionary implements IRAMDictionary {
 	
+	/**
+	 * The default load policy of a {@link RAMDictionary} is to load data in the
+	 * background when opened.
+	 *
+	 * @since JWI 2.4.0
+	 */
+	public static int defaultLoadPolicy = ILoadPolicy.BACKGROUND_LOAD;
+	
 	// immutable fields
 	protected final IDictionary backing;
+	protected final IInputStreamFactory factory;
 	protected final Lock lifecycleLock = new ReentrantLock(); 
 	protected final Lock loadLock = new ReentrantLock(); 
 	
 	// instance fields
+	protected volatile LifecycleState state = LifecycleState.CLOSED;
 	protected transient Thread loader;
 	protected int loadPolicy;
-	protected IVersion version;
 	protected DictionaryData data;
-
-	/**
-	 * Constructs a new wrapper RAM dictionary that will load the contents of
-	 * the wrapped dictionary into memory, with the specified load policy
-	 * 
-	 * @see ILoadPolicy
-	 * @param dict
-	 *            the dictionary to be wrapped
-	 * @param loadPolicy
-	 *            the load policy of the dictionary; see constants in
-	 *            {@link ILoadPolicy}.
-	 * @since JWI 2.2.0
-	 */
-	public RAMDictionary(IDictionary dict, int loadPolicy){
-		if(dict == null)
-			throw new NullPointerException();
-		this.backing = dict;
-		this.loadPolicy = loadPolicy;
-	}
-
-	/**
-	 * Constructs a new wrapper RAM dictionary that will load the contents the
-	 * specified local Wordnet data, with the specified load policy
-	 * 
-	 * @see ILoadPolicy
-	 * @param url
-	 *            a url pointing to a local copy of wordnet; may not be
-	 *            <code>null</code>
-	 * @param loadPolicy
-	 *            the load policy of the dictionary; see constants in
-	 *            {@link ILoadPolicy}.
-	 * @throws NullPointerException
-	 *             if the specified url is <code>null</code>
-	 * @since JWI 2.2.0
-	 */
-	public RAMDictionary(URL url, int loadPolicy){
-		this(new DataSourceDictionary(new FileProvider(url)), loadPolicy);
-	}
 	
 	/**
 	 * Constructs a new wrapper RAM dictionary that will load the contents the
-	 * specified local Wordnet data, with the specified load policy
+	 * specified local Wordnet data, with the specified load policy. Note that
+	 * if the file points to a exported image of an in-memory dictionary, the
+	 * required load policy is to load immediately.
+	 * 
+	 * @param file
+	 *            a file pointing to a local copy of wordnet; may not be
+	 *            <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified file is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public RAMDictionary(File file){
+		this(file, defaultLoadPolicy);
+	}
+
+	/**
+	 * Constructs a new RAMDictionary that will load the contents the specified
+	 * Wordnet data using the default load policy. Note that if the url points
+	 * to a resource that is the exported image of an in-memory dictionary, the
+	 * required load policy is to load immediately.
+	 * 
+	 * @param url
+	 *            a url pointing to a local copy of wordnet; may not be
+	 *            <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified url is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public RAMDictionary(URL url){
+		this(url, defaultLoadPolicy);
+	}
+	
+	/**
+	 * Loads data from the specified File using the specified load policy. Note
+	 * that if the file points to to a resource that is the exported image of an
+	 * in-memory dictionary, the specified load policy is ignored: the
+	 * dictionary is loaded into memory immediately.
 	 * 
 	 * @see ILoadPolicy
 	 * @param file
@@ -123,24 +146,140 @@ public class RAMDictionary implements IRAMDictionary {
 	 *            <code>null</code>
 	 * @param loadPolicy
 	 *            the load policy of the dictionary; see constants in
-	 *            {@link ILoadPolicy}.
+	 *            {@link ILoadPolicy}. Note that if the file points to to a
+	 *            resource that is the exported image of an in-memory
+	 *            dictionary, the specified load policy is ignored: the
+	 *            dictionary is loaded into memory immediately.
 	 * @throws NullPointerException
 	 *             if the specified file is <code>null</code>
 	 * @since JWI 2.2.0
 	 */
 	public RAMDictionary(File file, int loadPolicy){
-		this(new DataSourceDictionary(new FileProvider(file)), loadPolicy);
+		this(createBackingDictionary(file), createInputStreamFactory(file), loadPolicy);
+	}
 
+	/**
+	 * Loads data from the specified URL using the specified load policy. Note
+	 * that if the url points to a resource that is the exported image of an
+	 * in-memory dictionary, the specified load policy is ignored: the
+	 * dictionary is loaded into memory immediately.
+	 * 
+	 * @see ILoadPolicy
+	 * @param url
+	 *            a url pointing to a local copy of wordnet; may not be
+	 *            <code>null</code>
+	 * @param loadPolicy
+	 *            the load policy of the dictionary; see constants in
+	 *            {@link ILoadPolicy}. Note that if the url points to to a
+	 *            resource that is the exported image of an in-memory
+	 *            dictionary, the specified load policy is ignored: the
+	 *            dictionary is loaded into memory immediately.
+	 * @throws NullPointerException
+	 *             if the specified url is <code>null</code>
+	 * @since JWI 2.2.0
+	 */
+	public RAMDictionary(URL url, int loadPolicy){
+		this(createBackingDictionary(url), createInputStreamFactory(url), loadPolicy);
+	}
+	
+	/**
+	 * Constructs a new RAMDictionary that will load the contents of
+	 * the wrapped dictionary into memory, with the specified load policy.
+	 * 
+	 * @see ILoadPolicy
+	 * @param dict
+	 *            the dictionary to be wrapped, may not be <code>null</code>
+	 * @param loadPolicy
+	 *            the load policy of the dictionary; see constants in
+	 *            {@link ILoadPolicy}.
+	 * @since JWI 2.2.0
+	 */
+	public RAMDictionary(IDictionary dict, int loadPolicy){
+		this(dict, null, loadPolicy);
+	}
+
+	/**
+	 * Constructs a new RAMDictionary that will load an in-memory image from the
+	 * specified stream factory.
+	 * 
+	 * @param factory the stream factory that provides the stream; may not be <code>null</code>
+	 * @throws NullPointerException if the factory is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public RAMDictionary(IInputStreamFactory factory) {
+		this(null, factory, ILoadPolicy.IMMEDIATE_LOAD);
+	}
+	
+	/**
+	 * This is a internal constructor that unifies the constructor decision
+	 * matrix. Exactly one of the backing dictionary or the input factory must
+	 * be non-<code>null</code>, otherwise an exception is thrown. If the
+	 * factory is non-<code>null</code>, the dictionary will ignore the
+	 * specified load policy and set the load policy to "immediate load".
+	 * 
+	 * @param backing
+	 *            the backing dictionary; may be <code>null</code>
+	 * @param factory
+	 *            the input stream factory; may be <code>null</code>
+	 * @param loadPolicy
+	 *            the load policy
+	 * @since JWI 2.4.0
+	 */
+	protected RAMDictionary(IDictionary backing, IInputStreamFactory factory, int loadPolicy) {
+		if(backing == null && factory == null)
+			throw new NullPointerException();
+		if(backing != null && factory != null)
+			throw new IllegalStateException("Both backing dictionary and input stream factory may not be non-null");
+		
+		this.backing = backing;
+		this.factory = factory;
+		this.loadPolicy = (factory == null) ? 
+				loadPolicy : 
+					ILoadPolicy.IMMEDIATE_LOAD;
 	}
 
 	/**
 	 * Returns the dictionary that backs this instance.
 	 * 
-	 * @return the dictionary that backs this instance.
+	 * @return the dictionary that backs this instance; may be <code>null</code>.
 	 * @since JWI 2.2.0
 	 */
-	public IDictionary getBackingDictionary(){
+	public IDictionary getBackingDictionary() {
 		return backing;
+	}
+	
+	/**
+	 * Returns the stream factory that backs this instance; may be
+	 * <code>null</code>.
+	 * 
+	 * @return the stream factory that backs this instance; may be
+	 *         <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public IInputStreamFactory getStreamFactory(){
+		return factory;
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.IDictionary#setCharset(java.nio.charset.Charset)
+	 */
+	public void setCharset(Charset charset) {
+		if(isOpen())
+			throw new ObjectOpenException();
+		backing.setCharset(charset);
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IHasCharset#getCharset()
+	 */
+	public Charset getCharset() {
+		return (backing == null) ? 
+				null :
+					backing.getCharset();
 	}
 
 	/* 
@@ -158,8 +297,14 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @see edu.mit.jwi.data.ILoadPolicy#setLoadPolicy(int)
 	 */
 	public void setLoadPolicy(int policy) {
-		if(isOpen()) throw new IllegalStateException("dictionary is currently open");
-		this.loadPolicy = policy;
+		if(isOpen())
+			throw new ObjectOpenException();
+		// if the dictionary uses an input stream factory
+		// the load policy is effectively IMMEDIATE_LOAD
+		// so the load policy is set to this for information purposes
+		this.loadPolicy = (factory == null) ? 
+				policy : 
+					ILoadPolicy.IMMEDIATE_LOAD;
 	}
 
 	/* 
@@ -190,15 +335,24 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @see edu.mit.jwi.data.ILoadable#load(boolean)
 	 */
 	public void load(boolean block) throws InterruptedException {
-		if(loader != null || !isOpen()) return;
+		if(loader != null)
+			return;
 		try{
 			loadLock.lock();
-			if(loader != null) return;
+			
+			// if we are closed or in the process of closing, do nothing
+			if(state == LifecycleState.CLOSED || 
+					state == LifecycleState.CLOSING)
+				return;
+			
+			if(loader != null)
+				return;
 			loader = new Thread(new JWIBackgroundDataLoader());
 			loader.setName(JWIBackgroundDataLoader.class.getSimpleName());
 			loader.setDaemon(true);
 			loader.start();
-			if(block) loader.join();
+			if(block)
+				loader.join();
 		} finally {
 			loadLock.unlock();
 		}
@@ -212,25 +366,53 @@ public class RAMDictionary implements IRAMDictionary {
 	public boolean open() throws IOException {
 		try {
 			lifecycleLock.lock();
-			if(isOpen()) return true;
-			boolean result = backing.open();
-			if(result){
-				version = backing.getVersion();
+			
+			// if the dictionary is already open, return true
+			if(state == LifecycleState.OPEN)
+				return true;
+			
+			// if the dictionary is not closed, return false;
+			if(state != LifecycleState.CLOSED)
+				return false;
+			
+			// indicate the start of opening
+			state = LifecycleState.OPENING;
+			
+			if(backing == null){
+				// behavior when loading from an 
+				// input stream is immediate load
 				try {
-					switch(loadPolicy){
-					case IMMEDIATE_LOAD:
-						load(true);
-						break;
-					case BACKGROUND_LOAD:
-						load(false);
-						break;
-					}
+					load(true);
 				} catch(InterruptedException e){
 					e.printStackTrace();
+					return false;
 				}
+				return true;
+			} else {
+				// behavior when loading from a 
+				// backing dictionary depends on the
+				// load policy
+				boolean result = backing.open();
+				if(result){
+					try {
+						switch(loadPolicy){
+						case IMMEDIATE_LOAD:
+							load(true);
+							break;
+						case BACKGROUND_LOAD:
+							load(false);
+							break;
+						}
+					} catch(InterruptedException e){
+						e.printStackTrace();
+						return false;
+					}
+				}
+				return result;
 			}
-			return result;
 		} finally {
+			// make sure to clear the opening state
+			state = assertLifecycleState();
 			lifecycleLock.unlock();
 		}
 	}
@@ -241,7 +423,12 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @see edu.mit.jwi.IHasLifecycle#isOpen()
 	 */
 	public boolean isOpen() {
-		return data != null || backing.isOpen();
+		try {
+			lifecycleLock.lock();
+			return state == LifecycleState.OPEN;
+		} finally {
+			lifecycleLock.unlock();
+		}
 	}
 
 	/* 
@@ -253,7 +440,17 @@ public class RAMDictionary implements IRAMDictionary {
 		try {
 			lifecycleLock.lock();
 			
-			// stop loading
+			// if we are already closed, do nothing
+			if(state == LifecycleState.CLOSED)
+				return;
+			
+			// if we are already closing, do nothing
+			if(state != LifecycleState.CLOSING)
+				return;
+			
+			state = LifecycleState.CLOSING;
+			
+			// stop loading first
 			if(loader != null){
 				loader.interrupt();
 				try {
@@ -261,12 +458,44 @@ public class RAMDictionary implements IRAMDictionary {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
+				loader = null;
 			}
+			
+			// next close backing dictionary if it exists
+			if(backing != null)
+				backing.close();
 
-			loader = null;
-			version = null;
-			backing.close();
+			// null out backing data
 			data = null;
+		} finally {
+			state = assertLifecycleState();
+			lifecycleLock.unlock();
+		}
+	}
+	
+	/**
+	 * This is an internal utility method that determines whether this
+	 * dictionary should be considered open or closed.
+	 * 
+	 * @return the lifecycle state object representing open if the object is
+	 *         open; otherwise the lifecycle state object representing closed
+	 * @since JWI 2.4.0
+	 */
+	protected final LifecycleState assertLifecycleState(){
+		try {
+			lifecycleLock.lock();
+			
+			// if the data object is present, then we are open
+			if(data != null)
+				return LifecycleState.OPEN;
+			
+			// if the backing dictionary is present and open, then we are open
+			if(backing != null && backing.isOpen())
+				return LifecycleState.OPEN;
+			
+			// otherwise we are closed
+			return LifecycleState.CLOSED;
+						
 		} finally {
 			lifecycleLock.unlock();
 		}
@@ -275,10 +504,38 @@ public class RAMDictionary implements IRAMDictionary {
 	/* 
 	 * (non-Javadoc) 
 	 *
+	 * @see edu.mit.jwi.IRAMDictionary#export(java.io.OutputStream)
+	 */
+	public void export(OutputStream out) throws IOException {
+		try{
+			loadLock.lock();
+			if(!isLoaded())
+				throw new IllegalStateException("RAMDictionary not loaded into memory");
+			
+			out = new GZIPOutputStream(out);
+			out = new BufferedOutputStream(out);
+			ObjectOutputStream oos = new ObjectOutputStream(out);
+			
+			oos.writeObject(data);
+			oos.flush();
+			oos.close();
+		} finally {
+			loadLock.unlock();
+		}
+
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
 	 * @see edu.mit.jwi.item.IHasVersion#getVersion()
 	 */
 	public IVersion getVersion() {
-		return version;
+		if(backing != null)
+			return backing.getVersion();
+		if(data != null)
+			return data.version;
+		return null;
 	}
 
 	/* 
@@ -446,7 +703,7 @@ public class RAMDictionary implements IRAMDictionary {
 		private Iterator<E> itr;
 		private boolean checkForLoad;
 		private E last = null;
-
+	
 		/**
 		 * Constructs a new hot swappable iterator.
 		 * 
@@ -465,7 +722,7 @@ public class RAMDictionary implements IRAMDictionary {
 			this.itr = itr;
 			this.checkForLoad = checkForLoad;
 		}
-
+	
 		/* 
 		 * (non-Javadoc) 
 		 *
@@ -476,7 +733,7 @@ public class RAMDictionary implements IRAMDictionary {
 				checkForLoad();
 			return itr.hasNext();
 		}
-
+	
 		/* 
 		 * (non-Javadoc) 
 		 *
@@ -522,7 +779,7 @@ public class RAMDictionary implements IRAMDictionary {
 		 * @since JWI 2.2.0
 		 */
 		protected abstract Iterator<E> makeIterator();
-
+	
 		/* 
 		 * (non-Javadoc) 
 		 *
@@ -532,7 +789,7 @@ public class RAMDictionary implements IRAMDictionary {
 			throw new UnsupportedOperationException();
 		}
 	}
-	
+
 	/** 
 	 * A hot swappable iterator for index words.
 	 *
@@ -540,7 +797,7 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @since JWI 2.2.0
 	 */
 	protected class HotSwappableIndexWordIterator extends HotSwappableIterator<IIndexWord> {
-
+	
 		// the part of speech for this iterator
 		private final POS pos;
 		
@@ -568,7 +825,7 @@ public class RAMDictionary implements IRAMDictionary {
 		}
 		
 	}
-	
+
 	/** 
 	 * A hot swappable iterator for synsets.
 	 *
@@ -579,7 +836,7 @@ public class RAMDictionary implements IRAMDictionary {
 		
 		// the part of speech for this iterator
 		private final POS pos;
-
+	
 		/**
 		 * Constructs a new hot swappable iterator for synsets.
 		 * 
@@ -614,10 +871,10 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @since JWI 2.2.0
 	 */
 	protected class HotSwappableExceptionEntryIterator extends HotSwappableIterator<IExceptionEntry> {
-
+	
 		// the part of speech for this iterator
 		private final POS pos;
-
+	
 		/**
 		 * Constructs a new hot swappable iterator that iterates over exception
 		 * entries for the specified part of speech.
@@ -652,7 +909,7 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @since JWI 2.2.0
 	 */
 	protected class HotSwappableSenseEntryIterator extends HotSwappableIterator<ISenseEntry> {
-
+	
 		/**
 		 * Constructs a new hot swappable iterator that iterates over sense
 		 * entries.
@@ -692,9 +949,25 @@ public class RAMDictionary implements IRAMDictionary {
 		 */
 		public void run() {
 			try {
-				DataLoader loader = new DataLoader(backing);
-				RAMDictionary.this.data = loader.call();
-				backing.close();
+				if(backing == null){
+					// if there is no backing dictionary from
+					// which to load our data, load it from the 
+					// stream factory
+					InputStream in = factory.makeInputStream();
+					in = new GZIPInputStream(in);
+					in = new BufferedInputStream(in);
+					
+					// read the dictionary data
+					ObjectInputStream ois = new ObjectInputStream(in);
+					RAMDictionary.this.data = (DictionaryData)ois.readObject();
+					in.close();
+				} else {
+					// here we have a backing dictionary from
+					// which we should load our data
+					DataLoader loader = new DataLoader(backing);
+					RAMDictionary.this.data = loader.call();
+					backing.close();
+				}
 			} catch(Throwable t) {
 				if(!Thread.currentThread().isInterrupted()){
 					t.printStackTrace();
@@ -728,7 +1001,8 @@ public class RAMDictionary implements IRAMDictionary {
 		 * @since JWI 2.2.0
 		 */
 		public DataLoader(IDictionary source){
-			if(source == null) throw new NullPointerException();
+			if(source == null)
+				throw new NullPointerException();
 			this.source = source;
 		}
 	
@@ -740,6 +1014,8 @@ public class RAMDictionary implements IRAMDictionary {
 		public DictionaryData call() throws Exception {
 			
 			DictionaryData result = new DictionaryData();
+			
+			result.version = source.getVersion();
 			
 			Map<IIndexWordID, IIndexWord> idxWords;
 			Map<ISynsetID, ISynset> synsets;
@@ -832,9 +1108,19 @@ public class RAMDictionary implements IRAMDictionary {
 	 * @author Mark A. Finlayson
 	 * @since JWI 2.2.0
 	 */
-	public static class DictionaryData {
+	public static class DictionaryData implements Serializable {
 		
-		// data maps
+		/**
+		 * This serial version UID identifies the last version of JWI whose
+		 * serialized instances of the DictionaryData class are compatible with this
+		 * implementation.
+		 * 
+		 * @since JWI 2.4.0
+		 */
+		private static final long serialVersionUID = 240;
+		
+		// data
+		protected IVersion version;
 		protected Map<POS, Map<IIndexWordID, IIndexWord>> idxWords;
 		protected Map<POS, Map<ISynsetID, ISynset>> synsets;
 		protected Map<POS, Map<IExceptionEntryID, IExceptionEntry>> exceptions;
@@ -896,7 +1182,9 @@ public class RAMDictionary implements IRAMDictionary {
 		 * @since JWI 2.2.0
 		 */
 		protected <K,V> Map<K,V> makeMap(int initialSize, Map<K,V> contents){
-			return (contents == null) ? new LinkedHashMap<K,V>(initialSize) : new LinkedHashMap<K, V>(contents);
+			return (contents == null) ? 
+					new LinkedHashMap<K,V>(initialSize) : 
+						new LinkedHashMap<K, V>(contents);
 		}
 	
 		/**
@@ -947,7 +1235,8 @@ public class RAMDictionary implements IRAMDictionary {
 		 * @since JWI 2.2.0
 		 */
 		protected <K,V> Map<K,V> compactMap(Map<K,V> map){
-			if(map == null) throw new NullPointerException();
+			if(map == null)
+				throw new NullPointerException();
 			return makeMap(-1, map);
 		}
 		
@@ -1076,7 +1365,7 @@ public class RAMDictionary implements IRAMDictionary {
 		 * A utility class that allows us to build word objects
 		 *
 		 * @author Mark A. Finlayson
-		 * @version 2.3.3
+		 * @version 2.4.0
 		 * @since JWI 2.2.0
 		 */
 		public class WordBuilder implements IWordBuilder {
@@ -1084,7 +1373,7 @@ public class RAMDictionary implements IRAMDictionary {
 			// final instance fields
 			private final ISynset oldSynset;
 			private final IWord oldWord;
-
+	
 			/**
 			 * Constructs a new word builder object out of the specified old
 			 * synset and word.
@@ -1107,7 +1396,7 @@ public class RAMDictionary implements IRAMDictionary {
 				this.oldSynset = oldSynset;
 				this.oldWord = oldWord;
 			}
-
+	
 			/* 
 			 * (non-Javadoc) 
 			 *
@@ -1116,7 +1405,7 @@ public class RAMDictionary implements IRAMDictionary {
 			public IWord toWord(ISynset synset) {
 				return makeWord(synset, oldSynset, oldWord);
 			}
-
+	
 			/* 
 			 * (non-Javadoc) 
 			 *
@@ -1125,7 +1414,7 @@ public class RAMDictionary implements IRAMDictionary {
 			public void addVerbFrame(IVerbFrame frame) {
 				throw new UnsupportedOperationException();
 			}
-
+	
 			/* 
 			 * (non-Javadoc) 
 			 *
@@ -1136,6 +1425,186 @@ public class RAMDictionary implements IRAMDictionary {
 			}
 			
 		}
+	}
+
+	/**
+	 * Creates an input stream factory out of the specified File. If the file
+	 * points to a local directory then the method returns <code>null</code>.
+	 * 
+	 * @param file
+	 *            the file out of which to make an input stream factory; may not
+	 *            be <code>null</code>
+	 * @return a new input stream factory, or <code>null</code> if the url
+	 *         points to a local directory.
+	 * @throws NullPointerException
+	 *             if the specified file is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public static IInputStreamFactory createInputStreamFactory(File file) {
+		return FileProvider.isLocalDirectory(file) ?
+			null :
+				new FileInputStreamFactory(file);
+	}
+
+	/**
+	 * Creates an input stream factory out of the specified URL. If the url
+	 * points to a local directory then the method returns <code>null</code>.
+	 * 
+	 * @param url
+	 *            the url out of which to make an input stream factory; may not
+	 *            be <code>null</code>
+	 * @return a new input stream factory, or <code>null</code> if the url
+	 *         points to a local directory.
+	 * @throws NullPointerException
+	 *             if the specified url is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public static IInputStreamFactory createInputStreamFactory(URL url) {
+		return FileProvider.isLocalDirectory(url) ?
+			null :
+				new URLInputStreamFactory(url);
+	}
+	
+	/**
+	 * Creates a {@link DataSourceDictionary} out of the specified file, as long
+	 * as the file points to an existing local directory.
+	 *
+	 * @param file
+	 *            the local directory for which to create a data source
+	 *            dictionary; may not be <code>null</code>
+	 * @return a dictionary object that uses the specified local directory as
+	 *         its data source; otherwise, <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified file is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public static IDictionary createBackingDictionary(File file) {
+		return FileProvider.isLocalDirectory(file) ?
+				new DataSourceDictionary(new FileProvider(file)) :
+					null;
+	}
+
+	/**
+	 * Creates a {@link DataSourceDictionary} out of the specified url, as long
+	 * as the url points to an existing local directory. 
+	 *
+	 * @param url
+	 *            the local directory for which to create a data source
+	 *            dictionary; may not be <code>null</code>
+	 * @return a dictionary object that uses the specified local directory as
+	 *         its data source; otherwise, <code>null</code>
+	 * @throws NullPointerException
+	 *             if the specified url is <code>null</code>
+	 * @since JWI 2.4.0
+	 */
+	public static IDictionary createBackingDictionary(URL url) {
+		return FileProvider.isLocalDirectory(url) ?
+				new DataSourceDictionary(new FileProvider(url)) :
+					null;
+	}
+	
+	/**
+	 * This is a convenience method that transforms a Wordnet dictionary at the
+	 * specified file location into a in-memory image written to the specified
+	 * output stream. The file may point to either a directory or in-memory
+	 * image.
+	 *
+	 * @param in
+	 *            the file from which the Wordnet data should be loaded; may not
+	 *            be <code>null</code>
+	 * @param out
+	 *            the output stream to which the Wordnet data should be written;
+	 *            may not be <code>null</code>
+	 * @throws NullPointerException
+	 *             if either argument is <code>null</code>
+	 * @throws IOException
+	 *             if there is an IO problem when opening or exporting the
+	 *             dictionary.
+	 * @return <code>true</code> if the export was successful
+	 * @since JWI 2.4.0
+	 */
+	public static boolean export(File in, OutputStream out) throws IOException {
+		return export(new RAMDictionary(in, ILoadPolicy.IMMEDIATE_LOAD), out);
+	}
+	
+	/**
+	 * This is a convenience method that transforms a Wordnet dictionary at the
+	 * specified url location into a in-memory image written to the specified
+	 * output stream. The url may point to either a directory or in-memory
+	 * image.
+	 *
+	 * @param in
+	 *            the url from which the Wordnet data should be loaded; may not
+	 *            be <code>null</code>
+	 * @param out
+	 *            the output stream to which the Wordnet data should be written;
+	 *            may not be <code>null</code>
+	 * @throws NullPointerException
+	 *             if either argument is <code>null</code>
+	 * @throws IOException
+	 *             if there is an IO problem when opening or exporting the
+	 *             dictionary.
+	 * @return <code>true</code> if the export was successful
+	 * @since JWI 2.4.0
+	 */
+	public static boolean export(URL in, OutputStream out) throws IOException {
+		return export(new RAMDictionary(in, ILoadPolicy.IMMEDIATE_LOAD), out);
+	}
+	
+	/**
+	 * This is a convenience method that transforms a Wordnet dictionary drawn
+	 * from the specified input stream factory into a in-memory image written to
+	 * the specified output stream.
+	 *
+	 * @param in
+	 *            the file from which the Wordnet data should be loaded; may not
+	 *            be <code>null</code>
+	 * @param out
+	 *            the output stream to which the Wordnet data should be written;
+	 *            may not be <code>null</code>
+	 * @throws NullPointerException
+	 *             if either argument is <code>null</code>
+	 * @throws IOException
+	 *             if there is an IO problem when opening or exporting the
+	 *             dictionary.
+	 * @return <code>true</code> if the export was successful
+	 * @since JWI 2.4.0
+	 */
+	public static boolean export(IInputStreamFactory in, OutputStream out) throws IOException {
+		return export(new RAMDictionary(in), out);
+	}
+	
+	/**
+	 * Exports a specified RAM Dictionary object to the specified output stream.
+	 * This is convenience method.
+	 *
+	 * @param dict
+	 *            the dictionary to be exported; the dictionary will be closed
+	 *            at the end of the method.
+	 * @param out
+	 *            the output stream to which the data will be written.
+	 * @return <code>true</code> if the export was successful
+	 * @throws IOException
+	 *             if there was a IO problem during export
+	 * @since JWI 2.4.0
+	 */
+	protected static boolean export(IRAMDictionary dict, OutputStream out) throws IOException {
+		
+		// load initial data into memory
+		System.out.print("Performing load...");
+		dict.open();
+		System.out.println("(done)");
+		
+		// export to intermediate file
+		System.out.print("Performing export...");
+		dict.export(out);
+		dict.close();
+		dict = null;
+		System.gc();
+		System.out.println("(done)");
+		
+		return true;
+		
 	}
 
 }

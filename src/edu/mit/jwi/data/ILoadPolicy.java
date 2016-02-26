@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
@@ -15,15 +15,19 @@ package edu.mit.jwi.data;
  * also implement the {@link ILoadable} interface, but not always. A load policy
  * specifies what happens when the object is instantiated or initialized.
  * 
+ * Load policies are implemented as bit flags rather than enum objects (or 
+ * something else) so as to allow policies to indicate a number of possible
+ * permitted loading behaviors.
+ * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.2.0
  */
 public interface ILoadPolicy {
 
 	/**
 	 * Loading behavior where the object does not load itself when instantiated,
-	 * initialized, or opened.. Loading can be initiated through other means (e.g., a
+	 * initialized, or opened. Loading can be initiated through other means (e.g., a
 	 * call to the {@link ILoadable#load(boolean)} method, if the object
 	 * supports it). Value is 1 << 1.
 	 * 

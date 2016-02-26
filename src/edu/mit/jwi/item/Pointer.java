@@ -1,11 +1,11 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.item;
@@ -29,10 +29,19 @@ import java.util.Set;
  * instantiate their own pointers using this implementation.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.1.0
  */
 public class Pointer implements IPointer {
+	
+	/**
+	 * This serial version UID identifies the last version of JWI whose
+	 * serialized instances of the Pointer class are compatible with this
+	 * implementation.
+	 * 
+	 * @since JWI 2.4.0
+	 */
+	private static final long serialVersionUID = 240;
     
 	public static final Pointer ALSO_SEE 				= new Pointer("^", 	"Also See");
 	public static final Pointer	ANTONYM 				= new Pointer("!", 	"Antonym");
@@ -113,6 +122,32 @@ public class Pointer implements IPointer {
         return toString;
     }
     
+
+	/**
+	 * This utility method implements the appropriate deserialization for this
+	 * object.
+	 *
+	 * @return the appropriate deserialized object.
+	 * @since JWI 2.4.0
+	 */
+	protected Object readResolve(){
+		
+		// check and see if this symbol matches DERIVED_FROM_ADJ (which is
+		// excluded from the pointer map because it is ambiguous)
+		if(DERIVED_FROM_ADJ.getSymbol().equals(symbol) && DERIVED_FROM_ADJ.getName().equals(name))
+			return DERIVED_FROM_ADJ;
+		
+		// otherwise, try to find a match symbol
+		Pointer pointer = pointerMap.get(symbol);
+		if(pointer != null && 
+				pointer.getSymbol().equals(symbol) && 
+				pointer.getName().equals(name))
+			return pointer;
+		
+		// nothing matches, just return the deserialized object
+		return this;
+	}
+    
 	/**
 	 * Throws an exception if the specified string is <code>null</code>, empty,
 	 * or all whitespace. Returns a trimmed form of the string.
@@ -136,6 +171,7 @@ public class Pointer implements IPointer {
     private static final Map<String, Pointer> pointerMap;
     private static final Set<Pointer> pointerSet;
     
+    // class initialization code
     static {
 
 		// get the instance fields
@@ -197,10 +233,11 @@ public class Pointer implements IPointer {
 	 * @since JWI 2.1.0
 	 */
     public static Pointer getPointerType(String symbol, POS pos) {
-    	if(pos == POS.ADVERB && symbol.equals(ambiguousSymbol))
+    	if(pos == POS.ADVERB && 
+    			symbol.equals(ambiguousSymbol))
     		return DERIVED_FROM_ADJ;
         Pointer pointerType = pointerMap.get(symbol);
-        if (pointerType == null)
+        if(pointerType == null)
         	throw new IllegalArgumentException("No pointer type corresponding to symbol '" + symbol + "'");
         return pointerType;
     }

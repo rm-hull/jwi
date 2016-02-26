@@ -1,16 +1,17 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
 
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,11 +39,11 @@ import edu.mit.jwi.item.POS;
  * @param <T>
  *            the type of object for the content type
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.0.0
  */
 public class ContentType<T> implements IContentType<T> {
-
+	
 	public static final ContentType<IIndexWord> 			INDEX_NOUN 				= new ContentType<IIndexWord>(				DataType.INDEX, 		POS.NOUN, 		IndexLineComparator.getInstance());
 	public static final ContentType<IIndexWord> 			INDEX_VERB 				= new ContentType<IIndexWord>(				DataType.INDEX, 		POS.VERB, 		IndexLineComparator.getInstance());
 	public static final ContentType<IIndexWord> 			INDEX_ADVERB 			= new ContentType<IIndexWord>(				DataType.INDEX, 		POS.ADVERB, 	IndexLineComparator.getInstance());
@@ -62,6 +63,7 @@ public class ContentType<T> implements IContentType<T> {
 	private final POS fPOS;
 	private final ILineComparator fComparator;
 	private final String fString;
+	private final Charset fCharset;
 
 	/**
 	 * Constructs a new ContentType
@@ -78,11 +80,35 @@ public class ContentType<T> implements IContentType<T> {
 	 * @since JWI 2.0.0
 	 */
 	public ContentType(IDataType<T> type, POS pos, ILineComparator comparator) {
+		// for 2.4.0 we introduce a redirect for end-users of the original constructor
+		this(type, pos, comparator, null);
+	}
+	
+	/**
+	 * Constructs a new ContentType
+	 * 
+	 * @param type
+	 *            the data type for this content type, may not be
+	 *            <code>null</code>
+	 * @param pos
+	 *            the part of speech for this content type; may be null if the
+	 *            content type has no natural part of speech
+	 * @param comparator
+	 *            the line comparator for this content type; may be
+	 *            <code>null</code> if the lines are not ordered
+	 * @param charset
+	 *            the character set for this content type, may be
+	 *            <code>null</code>
+	 * @since JWI 2.3.4
+	 */
+	public ContentType(IDataType<T> type, POS pos, ILineComparator comparator, Charset charset) {
 		if(type == null)
 			throw new NullPointerException();
+				
 		fType = type;
 		fPOS = pos;
 		fComparator = comparator;
+		fCharset = charset; 
 
 		if (pos != null) {
 			fString = "[ContentType: " + fType.toString() + "/" + fPOS.toString() + "]";
@@ -116,6 +142,15 @@ public class ContentType<T> implements IContentType<T> {
 	 */
 	public ILineComparator getLineComparator() {
 		return fComparator;
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IHasCharset#getCharset()
+	 */
+	public Charset getCharset() {
+		return fCharset;
 	}
 
 	/* 

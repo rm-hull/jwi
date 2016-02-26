@@ -1,19 +1,21 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi.data;
 
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.Set;
 
 import edu.mit.jwi.item.IHasVersion;
+import edu.mit.jwi.item.POS;
 
 /**
  * Objects that implement this interface manage access to data source objects.
@@ -22,10 +24,10 @@ import edu.mit.jwi.item.IHasVersion;
  * the provider will throw an exception.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 1.0
  */
-public interface IDataProvider extends IHasVersion, IHasLifecycle {
+public interface IDataProvider extends IHasVersion, IHasLifecycle, IHasCharset {
 
 	/**
 	 * This method is used to set the source URL from which the provider
@@ -53,7 +55,20 @@ public interface IDataProvider extends IHasVersion, IHasLifecycle {
 	 * @since JWI 1.0
 	 */
 	public URL getSource();
-
+	
+	/**
+	 * Sets the character set associated with this dictionary. The character set
+	 * may be <code>null</code>.
+	 * 
+	 * @param charset
+	 *            the possibly <code>null</code> character set to use when
+	 *            decoding files.
+	 * @throws IllegalStateException
+	 *             if the provider is currently open
+	 * @since JWI 2.3.4
+	 */
+	public void setCharset(Charset charset);
+	
 	/**
 	 * Returns a set containing all the content types this provider looks for at
 	 * the resource location. The returned collection may be unmodifiable, or
@@ -66,6 +81,22 @@ public interface IDataProvider extends IHasVersion, IHasLifecycle {
 	 * @since JWI 2.2.0
 	 */
 	public Set<? extends IContentType<?>> getTypes();
+	
+	/**
+	 * Returns the first content type, if any, that matches the specified data
+	 * type and pos object. Either parameter may be <code>null</code>.
+	 * 
+	 * @param dt
+	 *            the data type, possibly <code>null</code>, of the desired
+	 *            content type
+	 * @param pos
+	 *            the part of speech, possibly <code>null</code>, of the desired
+	 *            content type
+	 * @return the first content type that matches the specified data type and
+	 *         part of speech.
+	 * @since JWI 2.3.4
+	 */
+	public <T> IContentType<T> resolveContentType(IDataType<T> dt, POS pos);
 
 	/**
 	 * Returns a data source object for the specified content type, if one is

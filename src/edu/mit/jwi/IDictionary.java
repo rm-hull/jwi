@@ -1,17 +1,19 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi;
 
+import java.nio.charset.Charset;
 import java.util.Iterator;
 
+import edu.mit.jwi.data.IHasCharset;
 import edu.mit.jwi.data.IHasLifecycle;
 import edu.mit.jwi.item.IExceptionEntry;
 import edu.mit.jwi.item.IExceptionEntryID;
@@ -30,13 +32,25 @@ import edu.mit.jwi.morph.IStemmer;
 /**
  * Objects that implement this interface are intended as the main entry point to
  * accessing Wordnet data. The dictionary must be opened by calling
- * {@code open()} before it is used.
+ * {@code open()} before it is used, otherwise its methods throw an
+ * {@link IllegalStateException}.
  * 
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 1.0
  */
-public interface IDictionary extends IHasVersion, IHasLifecycle {
+public interface IDictionary extends IHasVersion, IHasLifecycle, IHasCharset {
+
+	/**
+	 * Sets the character set associated with this dictionary. The character set
+	 * may be <code>null</code>.
+	 * 
+	 * @param charset
+	 *            the possibly <code>null</code> character set to use when
+	 *            decoding files.
+	 * @since JWI 2.3.4
+	 */
+	public void setCharset(Charset charset);
 
 	/**
 	 * This method is identical to <code>getIndexWord(IIndexWordID)</code> and

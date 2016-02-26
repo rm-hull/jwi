@@ -1,16 +1,17 @@
 /********************************************************************************
- * MIT Java Wordnet Interface Library (JWI) v2.3.3
- * Copyright (c) 2007-2014 Massachusetts Institute of Technology
+ * Java Wordnet Interface Library (JWI) v2.4.0
+ * Copyright (c) 2007-2015 Mark A. Finlayson
  *
- * JWI is distributed under the terms of the Creative Commons Attribution 3.0 
- * Unported License, which means it may be freely used for all purposes, as long 
- * as proper acknowledgment is made.  See the license file included with this
- * distribution for more details.
+ * JWI is distributed under the terms of the Creative Commons Attribution 4.0 
+ * International Public License, which means it may be freely used for all 
+ * purposes, as long as proper acknowledgment is made.  See the license file 
+ * included with this distribution for more details.
  *******************************************************************************/
 
 package edu.mit.jwi;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,7 +40,7 @@ import edu.mit.jwi.item.POS;
  * A dictionary that caches the results of another dictionary
  *
  * @author Mark A. Finlayson
- * @version 2.3.3
+ * @version 2.4.0
  * @since JWI 2.2.0
  */
 public class CachingDictionary implements ICachingDictionary {
@@ -119,6 +120,24 @@ public class CachingDictionary implements ICachingDictionary {
 	 */
 	public IItemCache getCache() {
 		return cache;
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.IDictionary#setCharset(java.nio.charset.Charset)
+	 */
+	public void setCharset(Charset charset) {
+		backing.setCharset(charset);
+	}
+
+	/* 
+	 * (non-Javadoc) 
+	 *
+	 * @see edu.mit.jwi.data.IHasCharset#getCharset()
+	 */
+	public Charset getCharset() {
+		return backing.getCharset();
 	}
 
 	/* 
@@ -350,7 +369,7 @@ public class CachingDictionary implements ICachingDictionary {
 	 * An LRU cache for objects in JWI.
 	 * 
 	 * @author Mark A. Finlayson
-	 * @version 2.3.3
+	 * @version 2.4.0
 	 * @since JWI 2.2.0
 	 */
 	public static class ItemCache implements IItemCache {
