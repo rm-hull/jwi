@@ -18,9 +18,9 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git://github.com/sqlboy/jwi.git</connection>
-    <developerConnection>scm:git:git@github.com:sqlboy/jwi.git</developerConnection>
-    <url>https://github.com/sqlboy/jwi.git</url>
+    <connection>scm:git:git://github.com/rm-hull/jwi.git</connection>
+    <developerConnection>scm:git:git@github.com:rm-hull/jwi.git</developerConnection>
+    <url>https://github.com/rm-hull/jwi.git</url>
   </scm>
 
   <developers>
@@ -32,21 +32,13 @@
   </developers>
 
   <properties>
-    <maven.compiler.source>1.6</maven.compiler.source>
-    <maven.compiler.target>1.6</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <encoding>UTF-8</encoding>
   </properties>
 
   <build>
     <sourceDirectory>${basedir}</sourceDirectory>
-
-    <extensions>
-      <extension>
-        <groupId>pjstadig</groupId>
-        <artifactId>maven-s3-wagon</artifactId>
-        <version>1.3.3</version>
-      </extension>
-    </extensions>
 
     <plugins>
       <plugin>
@@ -57,7 +49,7 @@
           <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
         </configuration>
       </plugin>
-    <plugins>
+    </plugins>
   </build>
 
   <distributionManagement>
@@ -71,7 +63,7 @@
       <name>Sonatype Nexus release repository</name>
       <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
     </repository>
-</distributionManagement>
+  </distributionManagement>
 
   <profiles>
     <profile>
